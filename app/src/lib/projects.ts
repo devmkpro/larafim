@@ -21,6 +21,8 @@ export interface Project {
   node_enabled: boolean;
   node_command: string | null;
   node_request: string | null;
+  /** Major do Node fixado; `null` = automático. */
+  node_pin: string | null;
   online: boolean;
 }
 
@@ -32,6 +34,7 @@ export interface ProjectConfig {
   docroot: string;
   node: boolean;
   node_command: string | null;
+  node_version: string | null;
   online: boolean;
 }
 
@@ -58,6 +61,7 @@ export function toConfig(p: Project): ProjectConfig {
     docroot: p.docroot,
     node: p.node_enabled,
     node_command: p.node_command,
+    node_version: p.node_pin,
     online: p.online,
   };
 }
@@ -94,6 +98,7 @@ const sample = (
   node_enabled: kind === "node",
   node_command: node ? "npm run dev" : null,
   node_request: node ? "22" : null,
+  node_pin: null,
   online: false,
 });
 
@@ -145,6 +150,7 @@ const mock = {
         docroot: config.docroot,
         node_enabled: config.node,
         node_command: config.node_command,
+        node_pin: config.node_version,
         status: "imported",
       });
       mockProjects = exists
@@ -176,6 +182,7 @@ const mock = {
       docroot: "public",
       node: false,
       node_command: "npm run dev",
+      node_version: null,
       online: false,
     },
     view_kind: "laravel",

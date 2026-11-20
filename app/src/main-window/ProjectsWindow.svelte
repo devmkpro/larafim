@@ -219,7 +219,7 @@
             <Glyph name="info" />
             <span>
               {newCount === 1 ? "1 projeto novo encontrado" : `${newCount} projetos novos encontrados`}. Importe para
-              configurar e, a partir da fase 3, deixar online.
+              configurar e deixar online.
             </span>
             <button class="btn" onclick={() => run(projectsApi.importAll())}>Importar todos</button>
           </div>
@@ -297,6 +297,10 @@
       <span>Servidor ligado · porta {status.port}</span>
       <span class="sep"></span>
       <span>{plural(status.online.length, "online", "online")}</span>
+      {#if status.node_running}
+        <span class="sep"></span>
+        <span>Node ativo: {status.node_running}</span>
+      {/if}
       {#if status.php_running.length}
         <span class="sep"></span>
         <span title="Versões do PHP com processos rodando agora">PHP ativo: {status.php_running.join(", ")}</span>

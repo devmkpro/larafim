@@ -6,6 +6,7 @@
   import TitleBar from "../lib/TitleBar.svelte";
   import Toggle from "../lib/Toggle.svelte";
   import { projectsApi, type ProjectsOverview } from "../lib/projects";
+  import NodeSection from "./NodeSection.svelte";
   import PhpSection from "./PhpSection.svelte";
   import TerminalSection from "./TerminalSection.svelte";
   import SettingRow from "./SettingRow.svelte";
@@ -75,7 +76,6 @@
     await app.update({ roots: [...app.config.roots, dir] });
   }
 
-  const nodeVersions = ["24", "22", "20", "18"];
   const services: { name: string; detail: string; phase: number; icon: GlyphName }[] = [
     { name: "MariaDB", detail: "Banco de dados · porta 3306", phase: 6, icon: "database" },
     { name: "Adminer", detail: "Gerenciar bancos pelo navegador", phase: 6, icon: "globe" },
@@ -104,7 +104,7 @@
     </nav>
 
     <main>
-      {#if section !== "php" && section !== "terminal"}<h1>{current.label}</h1>{/if}
+      {#if section !== "php" && section !== "terminal" && section !== "node"}<h1>{current.label}</h1>{/if}
 
       {#if app.error}
         <div class="infobar error"><Glyph name="info" /><span>{app.error}</span></div>
@@ -202,21 +202,7 @@
       {:else if section === "terminal"}
         <TerminalSection />
       {:else if section === "node"}
-        <p class="lead caption">Instale versões do Node.js para os projetos que usam Vite, Next, Nuxt…</p>
-        <div class="infobar">
-          <Glyph name="info" />
-          <span>O Node.js gerenciado pelo Sentinel chega na <strong>fase 5</strong>.</span>
-        </div>
-        <div class="table card">
-          <div class="thead section-title"><span>Versão</span><span>Instalada</span><span></span></div>
-          {#each nodeVersions as v (v)}
-            <div class="tr">
-              <span>{v}</span>
-              <span class="caption">Não</span>
-              <button class="btn" disabled>Instalar</button>
-            </div>
-          {/each}
-        </div>
+        <NodeSection />
       {:else if section === "services"}
         <p class="lead caption">Serviços ficam desligados e só sobem quando algum projeto precisa.</p>
         {#each services as s (s.name)}
@@ -325,29 +311,4 @@
     width: 100px;
   }
 
-  .table {
-    overflow: hidden;
-  }
-  .thead,
-  .tr {
-    display: grid;
-    grid-template-columns: 1fr 1fr 96px;
-    align-items: center;
-    gap: 12px;
-    padding: 0 16px;
-  }
-  .thead {
-    height: 36px;
-    background: var(--layer);
-    border-bottom: 1px solid var(--stroke);
-  }
-  .tr {
-    height: 48px;
-  }
-  .tr + .tr {
-    border-top: 1px solid var(--stroke);
-  }
-  .tr .btn {
-    justify-self: end;
-  }
 </style>

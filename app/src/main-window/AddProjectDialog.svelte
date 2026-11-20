@@ -55,6 +55,7 @@
         docroot,
         node,
         node_command: node ? nodeCommand.trim() : proposal.config.node_command,
+        node_version: null,
         online: false,
       });
       onsaved(data, proposal.config.path);

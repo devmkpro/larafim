@@ -4,7 +4,9 @@
   import { confirm, php, type PhpMatch } from "../lib/php";
   import { projectsApi, slugDomain, toConfig, type Project, type ProjectConfig, type ProjectsOverview } from "../lib/projects";
   import { asServerError, server, type ServerError } from "../lib/server";
+  import { nodeApi } from "../lib/node";
   import { terminal } from "../lib/terminal";
+  import DevPanel from "./DevPanel.svelte";
   import { app } from "../lib/state.svelte";
   import Toggle from "../lib/Toggle.svelte";
 
@@ -25,6 +27,12 @@
   let docroots = $state<string[]>([]);
   let error = $state<string | null>(null);
   let saving = $state(false);
+
+  let nodeMajors = $state<string[]>([]);
+  $effect(() => {
+    void tick;
+    nodeApi.installed().then((m) => (nodeMajors = m)).catch(() => {});
+  });
 
   // Campos de texto: só gravam ao confirmar (Enter ou sair do campo).
   let domain = $state("");
@@ -208,9 +216,7 @@
         <div class="status-text">
           <strong>{switching ? (project.online ? "Desligando…" : "Ligando…") : project.online ? "Online" : "Offline"}</strong>
           <span class="caption">
-            {#if project.kind === "node"}
-              Projetos só de Node ficam online na fase 5
-            {:else if project.online}
+            {#if project.online}
               {url.replace("http://", "")}
             {:else}
               Ligue para acessar no navegador
@@ -220,7 +226,7 @@
         <Toggle
           label="Projeto online"
           checked={project.online}
-          disabled={switching || project.kind === "node"}
+          disabled={switching}
           onchange={(v) => toggleOnline(v)}
         />
       </div>
@@ -242,6 +248,10 @@
                 <button class="btn subtle" onclick={() => toggleOnline(true)}>Tentar de novo</button>
               {:else if serverError.code === "uac_denied" || serverError.code === "hosts_failed"}
                 <button class="btn" onclick={() => toggleOnline(true)}>Tentar de novo</button>
+              {:else if serverError.code === "no_node"}
+                <button class="btn" onclick={() => api.openSettings("node")}>
+                  {serverError.suggest ? `Instalar Node ${serverError.suggest}` : "Instalar Node.js"}
+                </button>
               {:else if serverError.code === "no_php"}
                 <button class="btn" onclick={() => api.openSettings("php")}>
                   {serverError.suggest ? `Instalar PHP ${serverError.suggest}` : "Instalar PHP"}
@@ -361,8 +371,29 @@
               />
             </label>
           {/if}
+          {#if imported}
+            <div class="field">
+              <span>Versão do Node</span>
+              <div class="select">
+                <select
+                  disabled={saving}
+                  value={project.node_pin ?? ""}
+                  onchange={(e) => save({ node_version: e.currentTarget.value || null })}
+                >
+                  <option value="">Automática</option>
+                  {#each nodeMajors as m (m)}<option value={m}>Node {m}</option>{/each}
+                  {#if project.node_pin && !nodeMajors.includes(project.node_pin)}
+                    <option value={project.node_pin}>Node {project.node_pin} (não instalado)</option>
+                  {/if}
+                </select>
+              </div>
+            </div>
+          {/if}
           {#if project.node_request}
-            <p class="caption hint">Node pedido: {project.node_request} · versões do Node chegam na fase 5</p>
+            <p class="caption hint">Pedido pelo projeto: {project.node_request}</p>
+          {/if}
+          {#if imported && (project.kind === "node" || project.node_enabled)}
+            <DevPanel path={project.path} online={project.online} />
           {/if}
         {/if}
       </div>

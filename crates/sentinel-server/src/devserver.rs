@@ -209,6 +209,33 @@ impl DevServers {
             });
         }
 
+        // Se em 4 s o comando não imprimiu uma URL (ex.: Vite do Laravel sem
+        // log, scripts próprios), considera rodando — e, se havia PORT
+        // definida, usa ela para o proxy.
+        {
+            let expected: Option<u16> = spec.env.iter().find(|(k, _)| k == "PORT").and_then(|(_, v)| v.parse().ok());
+            let (status, port, listener) = (status.clone(), port.clone(), self.listener.clone());
+            tokio::spawn(async move {
+                tokio::time::sleep(std::time::Duration::from_secs(4)).await;
+                let snapshot = {
+                    let mut s = status.lock().unwrap();
+                    if s.state != DevState::Starting {
+                        return;
+                    }
+                    s.state = DevState::Running;
+                    if let Some(p) = expected {
+                        let mut cell = port.lock().unwrap();
+                        if cell.is_none() {
+                            *cell = Some(p);
+                            s.port = Some(p);
+                        }
+                    }
+                    s.clone()
+                };
+                listener(DevEvent::Status(snapshot));
+            });
+        }
+
         // Espera o processo terminar.
         {
             let (status, port, listener, key) = (status.clone(), port.clone(), self.listener.clone(), spec.key.clone());

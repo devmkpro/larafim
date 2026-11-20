@@ -14,6 +14,7 @@ export interface ServerStatus {
   port: number;
   online: OnlineSite[];
   php_running: string[];
+  node_running: number;
   hosts_outdated: boolean;
 }
 
@@ -24,7 +25,7 @@ export interface PortOwner {
 }
 
 export interface ServerError {
-  code: "port_busy" | "uac_denied" | "hosts_failed" | "no_php" | "node_later" | "error";
+  code: "port_busy" | "uac_denied" | "hosts_failed" | "no_php" | "no_node" | "no_command" | "error";
   message: string;
   owner: PortOwner | null;
   suggest: string | null;
@@ -43,6 +44,7 @@ const mockStatus = (): ServerStatus => ({
   port: mockConfig.http_port,
   online: [...mockOnline],
   php_running: mockOnline.length ? ["8.4.27"] : [],
+  node_running: 0,
   hosts_outdated: false,
 });
 
