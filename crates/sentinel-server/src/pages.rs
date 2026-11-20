@@ -78,3 +78,23 @@ pub fn php_error(detail: &str) -> String {
         &format!("<pre>{}</pre>", escape(detail)),
     )
 }
+
+/// Projeto Node ligado, servidor de dev ainda subindo (recarrega sozinha).
+pub fn node_starting(name: &str) -> String {
+    page(
+        "Iniciando…",
+        &format!(
+            "O servidor de desenvolvimento do projeto <strong>{}</strong> está subindo. Esta página recarrega sozinha.",
+            escape(name)
+        ),
+        "<script>setTimeout(()=>location.reload(),1500)</script>",
+    )
+}
+
+pub fn proxy_error(port: u16, detail: &str) -> String {
+    page(
+        "Servidor do Node não respondeu",
+        &format!("O Sentinel não conseguiu falar com o servidor de desenvolvimento na porta {port}."),
+        &format!("<pre>{}</pre>", escape(detail)),
+    )
+}

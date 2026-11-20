@@ -16,7 +16,8 @@ tauri-build = { version = "2", features = [] }
 sentinel-core.workspace = true
 sentinel-runtimes.workspace = true
 sentinel-server.workspace = true
-tokio = { version = "1", features = ["time"] }
+tokio = { version = "1", features = ["time", "sync"] }
+semver = "1"
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"

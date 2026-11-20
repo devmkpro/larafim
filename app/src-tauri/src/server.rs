@@ -9,7 +9,10 @@ use std::time::Duration;
 use sentinel_core::{ProjectKind, ProjectStatus, ProjectView};
 use sentinel_runtimes::php as rphp;
 use sentinel_server::port::{PortOwner, check_free};
-use sentinel_server::{Gateway, PhpRuntime, PoolSettings, Pools, Routes, SharedRoutes, Site, hosts};
+use sentinel_runtimes::node as rnode;
+use sentinel_server::{
+    DevEvent, DevServers, DevSpec, DevStatus, Gateway, PhpRuntime, PoolSettings, Pools, Routes, SharedRoutes, Site, hosts,
+};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
@@ -22,15 +25,23 @@ pub struct ServerState {
     gateway: tokio::sync::Mutex<Option<Gateway>>,
     /// Hosts do Windows desatualizados para os projetos online.
     hosts_outdated: std::sync::atomic::AtomicBool,
+    /// Servidores de desenvolvimento do Node.
+    pub dev: Arc<DevServers>,
+    dev_events: std::sync::Mutex<Option<tokio::sync::mpsc::UnboundedReceiver<DevEvent>>>,
 }
 
 impl ServerState {
     pub fn new() -> Self {
+        let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         Self {
             routes: Arc::new(RwLock::new(Routes::default())),
             pools: Pools::new(PoolSettings::default()),
             gateway: tokio::sync::Mutex::new(None),
             hosts_outdated: false.into(),
+            dev: DevServers::new(move |e| {
+                let _ = tx.send(e);
+            }),
+            dev_events: std::sync::Mutex::new(Some(rx)),
         }
     }
 }
@@ -49,13 +60,15 @@ pub struct ServerStatus {
     online: Vec<OnlineSite>,
     /// Versões do PHP com processos rodando agora.
     php_running: Vec<String>,
+    /// Servidores do Node rodando agora.
+    node_running: usize,
     hosts_outdated: bool,
 }
 
 /// Erro com código para a interface oferecer a ação certa.
 #[derive(Serialize, Debug)]
 pub struct ServerError {
-    /// "port_busy", "uac_denied", "hosts_failed", "no_php", "node_later", "error"
+    /// "port_busy", "uac_denied", "hosts_failed", "no_php", "no_node", "no_command", "error"
     code: &'static str,
     message: String,
     owner: Option<PortOwner>,
@@ -95,12 +108,16 @@ fn build_routes(app: &AppHandle) -> Routes {
     let state = app.state::<AppState>();
     let tld = state.config.lock().unwrap().tld.clone();
     let installed = rphp::list_installed(&state.paths.php_dir());
+    let dev = app.state::<ServerState>().dev.clone();
     let mut routes = Routes::default();
     for v in views(&state).into_iter().filter(|v| v.status == ProjectStatus::Imported) {
         let (php, php_missing) = php_for(&v, &installed);
+        // Projeto só de Node: o gateway repassa para o servidor de dev.
+        let proxy = (v.kind == ProjectKind::Node)
+            .then(|| dev.port_cell(&dev_key(&v.path)).unwrap_or_else(|| Arc::new(std::sync::Mutex::new(None))));
         routes.sites.insert(
             format!("{}.{tld}", v.domain),
-            Site { name: v.name.clone(), docroot: v.path.join(&v.docroot), php, php_missing, online: v.online },
+            Site { name: v.name.clone(), docroot: v.path.join(&v.docroot), php, php_missing, online: v.online, proxy },
         );
     }
     routes
@@ -235,6 +252,7 @@ pub async fn status(app: &AppHandle) -> ServerStatus {
         port,
         online,
         php_running: server.pools.running().await,
+        node_running: server.dev.all().iter().filter(|d| d.state != sentinel_server::DevState::Exited).count(),
         hosts_outdated: server.hosts_outdated.load(std::sync::atomic::Ordering::Relaxed),
     }
 }
@@ -275,9 +293,6 @@ pub async fn set_project_online(app: AppHandle, path: PathBuf, online: bool) -> 
         if view.status != ProjectStatus::Imported {
             return Err(ServerError::new("error", "importe o projeto antes de deixá-lo online"));
         }
-        if view.kind == ProjectKind::Node {
-            return Err(ServerError::new("node_later", "Projetos só de Node ficam online a partir da fase 5."));
-        }
         let installed = rphp::list_installed(&app.state::<AppState>().paths.php_dir());
         if let (None, true) = php_for(&view, &installed) {
             let mut e = ServerError::new("no_php", "Nenhum PHP instalado atende a este projeto.");
@@ -285,11 +300,17 @@ pub async fn set_project_online(app: AppHandle, path: PathBuf, online: bool) -> 
             return Err(e);
         }
         ensure_hosts(&app).await?;
+        if needs_dev(&view) {
+            start_dev(&app, &view)?;
+        }
+    } else {
+        app.state::<ServerState>().dev.stop(&dev_key(&path));
     }
 
     set_online_flag(&app, &path, online)?;
     if let Err(e) = refresh(&app).await {
         // Não deu para ligar o servidor: o projeto volta a ficar offline.
+        app.state::<ServerState>().dev.stop(&dev_key(&path));
         let _ = set_online_flag(&app, &path, false);
         let _ = refresh(&app).await;
         notify_projects(&app);
@@ -324,6 +345,7 @@ pub async fn stop_all_projects(app: AppHandle) -> Result<ServerStatus, ServerErr
 }
 
 pub async fn stop_all(app: &AppHandle) {
+    app.state::<ServerState>().dev.stop_all();
     {
         let state = app.state::<AppState>();
         let mut store = state.projects.lock().unwrap();
@@ -381,6 +403,14 @@ pub fn start(app: &AppHandle) {
             }
         });
 
+        forward_dev_events(&app);
+        // Religa os servidores do Node dos projetos que estavam online.
+        for v in views(&app.state::<AppState>()).into_iter().filter(|v| v.online && needs_dev(v)) {
+            if let Err(e) = start_dev(&app, &v) {
+                tracing::warn!(project = v.name, "servidor do Node não iniciou: {}", e.message);
+            }
+        }
+
         let any_online = app.state::<AppState>().projects.lock().unwrap().projects.iter().any(|p| p.online);
         if any_online && !hosts::is_up_to_date(&wanted_hosts(&app)) {
             app.state::<ServerState>().hosts_outdated.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -400,5 +430,109 @@ pub fn shutdown(app: &AppHandle) {
             g.stop();
         }
         server.pools.stop_all().await;
+    });
+    server.dev.stop_all();
+}
+
+// ---------- Servidores de desenvolvimento do Node ----------
+
+/// Chave do servidor de dev de um projeto.
+pub fn dev_key(path: &std::path::Path) -> String {
+    path.display().to_string().to_lowercase()
+}
+
+/// Projeto Node, ou PHP com "Servidor do Node" ligado (ex.: Laravel + Vite).
+fn needs_dev(v: &ProjectView) -> bool {
+    v.kind == ProjectKind::Node || v.node_enabled
+}
+
+fn first_number(text: &str) -> Option<String> {
+    let digits: String = text.chars().skip_while(|c| !c.is_ascii_digit()).take_while(|c| c.is_ascii_digit()).collect();
+    (!digits.is_empty()).then_some(digits)
+}
+
+fn start_dev(app: &AppHandle, v: &ProjectView) -> Result<(), ServerError> {
+    let state = app.state::<AppState>();
+    let command = v
+        .node_command
+        .clone()
+        .filter(|c| !c.trim().is_empty())
+        .ok_or_else(|| ServerError::new("no_command", "Informe o comando do Node do projeto (ex.: npm run dev)."))?;
+    let sel = rnode::select(&state.paths, &v.path);
+    let Some(node) = sel.node else {
+        let mut e = ServerError::new("no_node", format!("Node.js: {}.", sel.reason));
+        e.suggest = v.node_pin.clone().or_else(|| v.node_request.as_deref().and_then(first_number));
+        return Err(e);
+    };
+    let (tld, http_port) = {
+        let c = state.config.lock().unwrap();
+        (c.tld.clone(), c.http_port)
+    };
+    let url = project_url(&v.domain, &tld, http_port);
+    // APP_URL: o plugin do Laravel para o Vite libera o domínio do projeto (CORS).
+    let mut env = vec![("APP_URL".to_string(), url.clone()), ("SENTINEL_URL".to_string(), url)];
+    if v.kind == ProjectKind::Node {
+        let port = std::net::TcpListener::bind(("127.0.0.1", 0))
+            .and_then(|l| l.local_addr())
+            .map(|a| a.port())
+            .unwrap_or(3000);
+        env.push(("PORT".into(), port.to_string()));
+    }
+    let spec = DevSpec { key: dev_key(&v.path), cwd: v.path.clone(), command: command.clone(), node_dir: node.dir.clone(), env };
+    app.state::<ServerState>()
+        .dev
+        .start(spec)
+        .map_err(|e| ServerError::new("error", format!("Não foi possível iniciar o comando ({command}): {e}")))
+}
+
+#[derive(Serialize)]
+pub struct DevInfo {
+    status: Option<DevStatus>,
+    logs: Vec<String>,
+}
+
+#[tauri::command]
+pub fn dev_info(app: AppHandle, path: PathBuf) -> DevInfo {
+    let dev = &app.state::<ServerState>().dev;
+    let key = dev_key(&path);
+    DevInfo { status: dev.status(&key), logs: dev.logs(&key) }
+}
+
+/// Reinicia o servidor do Node de um projeto online.
+#[tauri::command]
+pub async fn restart_dev(app: AppHandle, path: PathBuf) -> Result<(), ServerError> {
+    let view = views(&app.state::<AppState>())
+        .into_iter()
+        .find(|v| sentinel_core::store::same_path(&v.path, &path))
+        .ok_or_else(|| ServerError::new("error", "projeto não encontrado"))?;
+    if !view.online || !needs_dev(&view) {
+        return Err(ServerError::new("error", "o projeto não está online com servidor do Node"));
+    }
+    start_dev(&app, &view)?;
+    refresh(&app).await
+}
+
+#[derive(Serialize, Clone)]
+struct DevLog {
+    key: String,
+    line: String,
+}
+
+/// Repassa os eventos dos servidores de dev para as janelas.
+fn forward_dev_events(app: &AppHandle) {
+    let Some(mut rx) = app.state::<ServerState>().dev_events.lock().unwrap().take() else { return };
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                DevEvent::Log { key, line } => {
+                    let _ = app.emit("node:log", DevLog { key, line });
+                }
+                DevEvent::Status(s) => {
+                    let _ = app.emit("node:status", &s);
+                    emit_status(&app).await;
+                }
+            }
+        }
     });
 }

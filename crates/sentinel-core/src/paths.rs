@@ -44,6 +44,10 @@ impl Paths {
         self.runtimes_dir().join("php")
     }
 
+    pub fn node_dir(&self) -> PathBuf {
+        self.runtimes_dir().join("node")
+    }
+
     pub fn data_dir(&self) -> PathBuf {
         self.root.join("data")
     }

@@ -26,6 +26,9 @@ pub struct ProjectConfig {
     pub node: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node_command: Option<String>,
+    /// Major do Node fixado ("22"). Vazio = automático.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_version: Option<String>,
     /// Intenção de deixar online (usado a partir da fase 3).
     #[serde(default)]
     pub online: bool,
@@ -69,6 +72,8 @@ pub struct ProjectView {
     pub node_enabled: bool,
     pub node_command: Option<String>,
     pub node_request: Option<String>,
+    /// Major do Node fixado; `None` = automático.
+    pub node_pin: Option<String>,
     pub online: bool,
 }
 
@@ -186,6 +191,11 @@ impl ProjectsFile {
             }
         }
         cfg.node_command = cfg.node_command.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
+        if let Some(major) = &cfg.node_version
+            && (major.is_empty() || !major.chars().all(|c| c.is_ascii_digit()))
+        {
+            return Err(Error::Invalid(format!("versão do Node inválida: {major}")));
+        }
         if cfg.node && cfg.node_command.is_none() {
             return Err(Error::Invalid("informe o comando do Node (ex.: npm run dev)".into()));
         }
@@ -227,6 +237,7 @@ fn default_config(d: &DetectedProject, domain: String) -> ProjectConfig {
         docroot: d.docroot.clone(),
         node: d.kind == ProjectKind::Node && d.node_command.is_some(),
         node_command: d.node_command.clone(),
+        node_version: None,
         online: false,
     }
 }
@@ -246,6 +257,7 @@ fn view_from(d: &DetectedProject, root: Option<PathBuf>, cfg: &ProjectConfig) ->
         node_enabled: cfg.node,
         node_command: cfg.node_command.clone().or_else(|| d.node_command.clone()),
         node_request: d.node.clone(),
+        node_pin: cfg.node_version.clone(),
         online: cfg.online,
     }
 }
@@ -265,6 +277,7 @@ fn missing_view(cfg: &ProjectConfig, root: Option<PathBuf>) -> ProjectView {
         node_enabled: cfg.node,
         node_command: cfg.node_command.clone(),
         node_request: None,
+        node_pin: cfg.node_version.clone(),
         online: false,
     }
 }

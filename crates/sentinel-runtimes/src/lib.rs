@@ -3,6 +3,7 @@
 pub mod download;
 pub mod error;
 pub mod extras;
+pub mod node;
 pub mod php;
 
 pub use error::{Error, Result};

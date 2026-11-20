@@ -1,5 +1,5 @@
 //! Atalho de linha de comando do Sentinel. O mesmo executável é copiado
-//! como `php.exe` e `composer.exe` para `%LOCALAPPDATA%\Sentinel\bin`.
+//! como `php.exe`, `composer.exe`, `node.exe`, `npm.exe` e `npx.exe` para `%LOCALAPPDATA%\Sentinel\bin`.
 //! Ao rodar, olha a pasta atual, escolhe a versão do PHP certa e repassa
 //! tudo (argumentos, entrada/saída, código de saída) para o PHP real.
 //!
@@ -74,12 +74,47 @@ fn run(program: &Path, args: Vec<std::ffi::OsString>) -> ExitCode {
     }
 }
 
+/// node / npm / npx: escolhe o Node da pasta e roda.
+fn run_node(tool: &str, paths: &Paths, cwd: &Path) -> ExitCode {
+    let sel = sentinel_runtimes::node::select(paths, cwd);
+    if std::env::var_os("SENTINEL_SHIM_WHICH").is_some() {
+        println!(
+            "{}",
+            serde_json::json!({
+                "version": sel.node.as_ref().map(|n| n.version.clone()),
+                "reason": sel.reason,
+                "project": sel.project,
+            })
+        );
+        return ExitCode::SUCCESS;
+    }
+    let Some(node) = sel.node else {
+        return fail(&format!("{}. Instale em Sentinel › Configurações › Node.js.", sel.reason));
+    };
+    if std::env::var_os("SENTINEL_SHIM_DEBUG").is_some() {
+        eprintln!("sentinel: Node {} — {}", node.version, sel.reason);
+    }
+    // Scripts do npm que chamam "node" acham a mesma versão primeiro.
+    let path = format!("{};{}", node.dir.display(), std::env::var("PATH").unwrap_or_default());
+    // SAFETY: programa de uma thread só; nada mais lê o ambiente agora.
+    unsafe { std::env::set_var("PATH", path) };
+    let mut args: Vec<std::ffi::OsString> = Vec::new();
+    if tool != "node" {
+        args.push(node.npm_cli(tool).into_os_string());
+    }
+    args.extend(std::env::args_os().skip(1));
+    run(&node.node_exe(), args)
+}
+
 fn main() -> ExitCode {
     let tool = tool_name();
     let Some(paths) = sentinel_paths() else {
         return fail("pasta de dados do Sentinel não encontrada");
     };
     let cwd = std::env::current_dir().unwrap_or_default();
+    if matches!(tool.as_str(), "node" | "npm" | "npx") {
+        return run_node(&tool, &paths, &cwd);
+    }
     let sel = select(&paths, &cwd);
 
     if std::env::var_os("SENTINEL_SHIM_WHICH").is_some() {

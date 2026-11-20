@@ -26,7 +26,7 @@ use crate::pool::{PhpRuntime, Pools};
 use crate::resolve::{Target, resolve};
 use crate::cgi;
 
-type Body = BoxBody<Bytes, std::io::Error>;
+pub(crate) type Body = BoxBody<Bytes, std::io::Error>;
 
 /// Maior corpo de requisição aceito (uploads).
 const MAX_BODY: usize = 256 * 1024 * 1024;
@@ -41,6 +41,8 @@ pub struct Site {
     /// O projeto usa PHP mas nenhuma versão compatível está instalada.
     pub php_missing: bool,
     pub online: bool,
+    /// Projeto Node: o gateway repassa tudo para o servidor de dev nessa porta.
+    pub proxy: Option<crate::devserver::PortCell>,
 }
 
 /// Tabela domínio → projeto. Trocada a quente, sem reiniciar o gateway.
@@ -81,6 +83,7 @@ impl Gateway {
                             let _ = http1::Builder::new()
                                 .keep_alive(true)
                                 .serve_connection(TokioIo::new(stream), service)
+                                .with_upgrades() // WebSocket (HMR do Vite/Next)
                                 .await;
                         });
                     }
@@ -110,7 +113,7 @@ fn full(status: StatusCode, content_type: &str, body: impl Into<Bytes>) -> Respo
     resp
 }
 
-fn html(status: StatusCode, body: String) -> Response<Body> {
+pub(crate) fn html(status: StatusCode, body: String) -> Response<Body> {
     full(status, "text/html; charset=utf-8", body)
 }
 
@@ -139,6 +142,14 @@ async fn handle(req: Request<Incoming>, ctx: Arc<Ctx>, remote: SocketAddr) -> Re
     };
     if !site.online {
         return Ok(html(StatusCode::SERVICE_UNAVAILABLE, pages::offline(&site.name)));
+    }
+
+    if let Some(cell) = &site.proxy {
+        let port = *cell.lock().unwrap();
+        return Ok(match port {
+            Some(port) => crate::proxy::forward(req, port, &host).await,
+            None => html(StatusCode::SERVICE_UNAVAILABLE, pages::node_starting(&site.name)),
+        });
     }
 
     let path = req.uri().path().to_string();

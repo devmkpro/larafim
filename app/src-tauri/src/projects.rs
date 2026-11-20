@@ -154,6 +154,7 @@ pub fn inspect_folder(state: State<'_, AppState>, path: PathBuf) -> CmdResult<Fo
             docroot: d.docroot.clone(),
             node: d.kind == sentinel_core::ProjectKind::Node && d.node_command.is_some(),
             node_command: d.node_command.clone(),
+            node_version: None,
             online: false,
         },
         view_kind: d.kind,

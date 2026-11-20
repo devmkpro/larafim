@@ -12,7 +12,7 @@ use crate::AppState;
 type CmdResult<T> = Result<T, String>;
 
 const SHIM_FILE: &str = "sentinel-shim.exe";
-const TOOLS: [&str; 2] = ["php.exe", "composer.exe"];
+const TOOLS: [&str; 5] = ["php.exe", "composer.exe", "node.exe", "npm.exe", "npx.exe"];
 
 /// Onde está o executável do atalho que vem com o Sentinel.
 fn shim_source(app: &AppHandle) -> Option<PathBuf> {

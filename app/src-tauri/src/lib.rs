@@ -5,6 +5,7 @@
 //! ícone da bandeja e recria a janela quando a pessoa pede.
 
 mod commands;
+mod node;
 mod php;
 mod projects;
 mod server;
@@ -57,6 +58,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(AppState { paths, config: Mutex::new(config), projects: Mutex::new(projects) })
         .manage(php::PhpState::default())
+        .manage(node::NodeState::default())
         .manage(server::ServerState::new())
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
@@ -89,6 +91,13 @@ pub fn run() {
             server::stop_all_projects,
             server::fix_hosts,
             server::open_url,
+            server::dev_info,
+            server::restart_dev,
+            node::node_overview,
+            node::node_install,
+            node::node_cancel,
+            node::node_remove,
+            node::node_installed,
             terminal::terminal_status,
             terminal::install_shims,
             terminal::set_shims_in_path,

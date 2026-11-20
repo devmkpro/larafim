@@ -153,6 +153,7 @@ mod tests {
             docroot: String::new(),
             node: false,
             node_command: None,
+            node_version: None,
             online: false,
         };
         store.upsert(cfg(&loja, "loja", None)).unwrap();
