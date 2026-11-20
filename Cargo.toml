@@ -1,0 +1,38 @@
+[workspace]
+resolver = "3"
+members = ["crates/*", "app/src-tauri"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Sentinel"]
+
+[workspace.dependencies]
+sentinel-core = { path = "crates/sentinel-core" }
+sentinel-runtimes = { path = "crates/sentinel-runtimes" }
+sentinel-server = { path = "crates/sentinel-server" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "0.9"
+dirs = "6"
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-appender = "0.2"
+tempfile = "3"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
+
+# Compilação de desenvolvimento mais enxuta em disco: sem símbolos de
+# depuração completos nas dependências.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false

@@ -1,0 +1,28 @@
+[package]
+name = "sentinel-server"
+description = "Servidor do Sentinel: gateway HTTP por domínio, pools de php-cgi (FastCGI), arquivo hosts e portas"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+thiserror.workspace = true
+tracing.workspace = true
+serde.workspace = true
+hyper = { version = "1", features = ["server", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body-util = "0.1"
+bytes = "1"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
+tokio = { version = "1", features = ["net", "process", "sync", "time", "fs", "io-util", "macros", "rt"] }
+tokio-util = { version = "0.7", features = ["io"] }
+mime_guess = "2"
+percent-encoding = "2"
+runas = "1"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_Security", "Win32_NetworkManagement_IpHelper", "Win32_Networking_WinSock"] }
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

@@ -1,0 +1,404 @@
+//! Liga o servidor do Sentinel ao app: rotas a partir dos projetos, gateway
+//! na porta configurada, arquivo hosts e projetos online/offline.
+
+use std::collections::BTreeSet;
+use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
+
+use sentinel_core::{ProjectKind, ProjectStatus, ProjectView};
+use sentinel_runtimes::php as rphp;
+use sentinel_server::port::{PortOwner, check_free};
+use sentinel_server::{Gateway, PhpRuntime, PoolSettings, Pools, Routes, SharedRoutes, Site, hosts};
+use serde::Serialize;
+use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_opener::OpenerExt;
+
+use crate::AppState;
+
+pub struct ServerState {
+    routes: SharedRoutes,
+    pools: Arc<Pools>,
+    gateway: tokio::sync::Mutex<Option<Gateway>>,
+    /// Hosts do Windows desatualizados para os projetos online.
+    hosts_outdated: std::sync::atomic::AtomicBool,
+}
+
+impl ServerState {
+    pub fn new() -> Self {
+        Self {
+            routes: Arc::new(RwLock::new(Routes::default())),
+            pools: Pools::new(PoolSettings::default()),
+            gateway: tokio::sync::Mutex::new(None),
+            hosts_outdated: false.into(),
+        }
+    }
+}
+
+#[derive(Serialize, Clone)]
+pub struct OnlineSite {
+    pub name: String,
+    pub url: String,
+    pub path: PathBuf,
+}
+
+#[derive(Serialize, Clone)]
+pub struct ServerStatus {
+    running: bool,
+    port: u16,
+    online: Vec<OnlineSite>,
+    /// Versões do PHP com processos rodando agora.
+    php_running: Vec<String>,
+    hosts_outdated: bool,
+}
+
+/// Erro com código para a interface oferecer a ação certa.
+#[derive(Serialize, Debug)]
+pub struct ServerError {
+    /// "port_busy", "uac_denied", "hosts_failed", "no_php", "node_later", "error"
+    code: &'static str,
+    message: String,
+    owner: Option<PortOwner>,
+    /// Minor do PHP sugerido para instalar (code = "no_php").
+    suggest: Option<String>,
+}
+
+impl ServerError {
+    fn new(code: &'static str, message: impl Into<String>) -> Self {
+        Self { code, message: message.into(), owner: None, suggest: None }
+    }
+}
+
+fn views(state: &AppState) -> Vec<ProjectView> {
+    let roots = state.config.lock().unwrap().roots.clone();
+    state.projects.lock().unwrap().views(&roots)
+}
+
+/// Qual PHP instalado um projeto usa agora: (runtime, faltando?).
+fn php_for(view: &ProjectView, installed: &[rphp::InstalledPhp]) -> (Option<PhpRuntime>, bool) {
+    if view.kind == ProjectKind::Node {
+        return (None, false);
+    }
+    let found = match (&view.php_pin, &view.php_request) {
+        (Some(minor), _) => installed.iter().find(|p| &p.minor == minor),
+        (None, Some(req)) => rphp::best_installed(req, installed),
+        (None, None) => installed.first(),
+    };
+    match found {
+        Some(p) => (Some(PhpRuntime { version: p.version.clone(), dir: p.dir.clone() }), false),
+        None => (None, true),
+    }
+}
+
+/// Reconstrói a tabela de domínios a partir do cadastro.
+fn build_routes(app: &AppHandle) -> Routes {
+    let state = app.state::<AppState>();
+    let tld = state.config.lock().unwrap().tld.clone();
+    let installed = rphp::list_installed(&state.paths.php_dir());
+    let mut routes = Routes::default();
+    for v in views(&state).into_iter().filter(|v| v.status == ProjectStatus::Imported) {
+        let (php, php_missing) = php_for(&v, &installed);
+        routes.sites.insert(
+            format!("{}.{tld}", v.domain),
+            Site { name: v.name.clone(), docroot: v.path.join(&v.docroot), php, php_missing, online: v.online },
+        );
+    }
+    routes
+}
+
+/// Domínios que devem estar no arquivo hosts: todos os projetos importados
+/// (assim ligar/desligar não pede permissão de novo).
+fn wanted_hosts(app: &AppHandle) -> BTreeSet<String> {
+    let state = app.state::<AppState>();
+    let tld = state.config.lock().unwrap().tld.clone();
+    state
+        .projects
+        .lock()
+        .unwrap()
+        .projects
+        .iter()
+        .map(|p| format!("{}.{tld}", p.domain))
+        .filter(|h| hosts::valid_host(h))
+        .collect()
+}
+
+/// Atualiza o hosts se precisar (pede UAC). Sem mudança, não pede nada.
+pub async fn ensure_hosts(app: &AppHandle) -> Result<(), ServerError> {
+    // Só para desenvolvimento/testes automáticos: não mexe no hosts.
+    if std::env::var_os("SENTINEL_SKIP_HOSTS").is_some() {
+        tracing::warn!("SENTINEL_SKIP_HOSTS definido: arquivo hosts não foi verificado");
+        return Ok(());
+    }
+    let wanted = wanted_hosts(app);
+    if hosts::is_up_to_date(&wanted) {
+        app.state::<ServerState>().hosts_outdated.store(false, std::sync::atomic::Ordering::Relaxed);
+        return Ok(());
+    }
+    let dir = app.state::<AppState>().paths.root().to_path_buf();
+    let result = tauri::async_runtime::spawn_blocking(move || hosts::request_update(&wanted, &dir))
+        .await
+        .map_err(|e| ServerError::new("error", e.to_string()))?;
+    match result {
+        Ok(()) => {
+            app.state::<ServerState>().hosts_outdated.store(false, std::sync::atomic::Ordering::Relaxed);
+            Ok(())
+        }
+        Err(hosts::HostsError::Denied) => Err(ServerError::new("uac_denied", hosts::HostsError::Denied.to_string())),
+        Err(e) => Err(ServerError::new("hosts_failed", e.to_string())),
+    }
+}
+
+/// Aplica o cadastro: rotas novas, gateway ligado só se houver projeto
+/// online (e na porta configurada), status para a interface e bandeja.
+pub async fn refresh(app: &AppHandle) -> Result<(), ServerError> {
+    let routes = build_routes(app);
+    let any_online = routes.sites.values().any(|s| s.online);
+    let server = app.state::<ServerState>();
+    *server.routes.write().unwrap() = routes;
+
+    let port = app.state::<AppState>().config.lock().unwrap().http_port;
+    let mut gateway = server.gateway.lock().await;
+    let result = if any_online {
+        if gateway.as_ref().is_some_and(|g| g.port() != port) {
+            gateway.take().unwrap().stop();
+        }
+        if gateway.is_none() {
+            match start_gateway(port, server.routes.clone(), server.pools.clone()).await {
+                Ok(g) => {
+                    *gateway = Some(g);
+                    Ok(())
+                }
+                Err(e) => Err(e),
+            }
+        } else {
+            Ok(())
+        }
+    } else {
+        if let Some(g) = gateway.take() {
+            g.stop();
+            server.pools.stop_all().await;
+        }
+        Ok(())
+    };
+    drop(gateway);
+    emit_status(app).await;
+    result
+}
+
+async fn start_gateway(port: u16, routes: SharedRoutes, pools: Arc<Pools>) -> Result<Gateway, ServerError> {
+    if let Err(owner) = check_free(port) {
+        let who = owner
+            .as_ref()
+            .map(|o| match &o.hint {
+                Some(h) => format!("{} ({h})", o.name),
+                None => o.name.clone(),
+            })
+            .unwrap_or_else(|| "outro programa".into());
+        return Err(ServerError {
+            code: "port_busy",
+            message: format!("A porta {port} está ocupada por {who}."),
+            owner,
+            suggest: None,
+        });
+    }
+    Gateway::start(port, routes, pools).await.map_err(|e| ServerError {
+        code: "port_busy",
+        message: format!("Não foi possível usar a porta {port}: {e}"),
+        owner: None,
+        suggest: None,
+    })
+}
+
+pub async fn status(app: &AppHandle) -> ServerStatus {
+    let state = app.state::<AppState>();
+    let server = app.state::<ServerState>();
+    let (tld, port) = {
+        let c = state.config.lock().unwrap();
+        (c.tld.clone(), c.http_port)
+    };
+    let running = server.gateway.lock().await.is_some();
+    let online = state
+        .projects
+        .lock()
+        .unwrap()
+        .projects
+        .iter()
+        .filter(|p| p.online)
+        .map(|p| OnlineSite {
+            name: p.domain.clone(),
+            url: project_url(&p.domain, &tld, port),
+            path: p.path.clone(),
+        })
+        .collect();
+    ServerStatus {
+        running,
+        port,
+        online,
+        php_running: server.pools.running().await,
+        hosts_outdated: server.hosts_outdated.load(std::sync::atomic::Ordering::Relaxed),
+    }
+}
+
+fn project_url(domain: &str, tld: &str, port: u16) -> String {
+    if port == 80 { format!("http://{domain}.{tld}") } else { format!("http://{domain}.{tld}:{port}") }
+}
+
+async fn emit_status(app: &AppHandle) {
+    let s = status(app).await;
+    crate::tray::update_online(app, &s.online);
+    let _ = app.emit("server-status", &s);
+}
+
+fn set_online_flag(app: &AppHandle, path: &std::path::Path, online: bool) -> Result<(), ServerError> {
+    let state = app.state::<AppState>();
+    let mut store = state.projects.lock().unwrap();
+    let Some(cfg) = store.projects.iter_mut().find(|p| sentinel_core::store::same_path(&p.path, path)) else {
+        return Err(ServerError::new("error", "importe o projeto antes de deixá-lo online"));
+    };
+    cfg.online = online;
+    store.save(&state.paths.projects_file()).map_err(|e| ServerError::new("error", e.to_string()))
+}
+
+#[derive(Serialize)]
+pub struct OnlineResult {
+    status: ServerStatus,
+}
+
+/// Liga ou desliga um projeto.
+#[tauri::command]
+pub async fn set_project_online(app: AppHandle, path: PathBuf, online: bool) -> Result<OnlineResult, ServerError> {
+    if online {
+        let view = views(&app.state::<AppState>())
+            .into_iter()
+            .find(|v| sentinel_core::store::same_path(&v.path, &path))
+            .ok_or_else(|| ServerError::new("error", "projeto não encontrado"))?;
+        if view.status != ProjectStatus::Imported {
+            return Err(ServerError::new("error", "importe o projeto antes de deixá-lo online"));
+        }
+        if view.kind == ProjectKind::Node {
+            return Err(ServerError::new("node_later", "Projetos só de Node ficam online a partir da fase 5."));
+        }
+        let installed = rphp::list_installed(&app.state::<AppState>().paths.php_dir());
+        if let (None, true) = php_for(&view, &installed) {
+            let mut e = ServerError::new("no_php", "Nenhum PHP instalado atende a este projeto.");
+            e.suggest = view.php_pin.clone();
+            return Err(e);
+        }
+        ensure_hosts(&app).await?;
+    }
+
+    set_online_flag(&app, &path, online)?;
+    if let Err(e) = refresh(&app).await {
+        // Não deu para ligar o servidor: o projeto volta a ficar offline.
+        let _ = set_online_flag(&app, &path, false);
+        let _ = refresh(&app).await;
+        notify_projects(&app);
+        return Err(e);
+    }
+    notify_projects(&app);
+    tracing::info!(path = %path.display(), online, "projeto alterado");
+    Ok(OnlineResult { status: status(&app).await })
+}
+
+/// Avisa as janelas que o cadastro mudou (interruptor Online).
+fn notify_projects(app: &AppHandle) {
+    let state = app.state::<AppState>();
+    let roots = state.config.lock().unwrap().roots.clone();
+    let store = state.projects.lock().unwrap();
+    let _ = app.emit(
+        "projects-changed",
+        serde_json::json!({ "projects": store.views(&roots), "ignored": store.ignored }),
+    );
+}
+
+#[tauri::command]
+pub async fn server_status(app: AppHandle) -> ServerStatus {
+    status(&app).await
+}
+
+/// Desliga todos os projetos (bandeja e barra de status).
+#[tauri::command]
+pub async fn stop_all_projects(app: AppHandle) -> Result<ServerStatus, ServerError> {
+    stop_all(&app).await;
+    Ok(status(&app).await)
+}
+
+pub async fn stop_all(app: &AppHandle) {
+    {
+        let state = app.state::<AppState>();
+        let mut store = state.projects.lock().unwrap();
+        store.projects.iter_mut().for_each(|p| p.online = false);
+        let _ = store.save(&state.paths.projects_file());
+    }
+    let _ = refresh(app).await;
+    notify_projects(app);
+}
+
+/// Corrige o arquivo hosts (pede UAC).
+#[tauri::command]
+pub async fn fix_hosts(app: AppHandle) -> Result<ServerStatus, ServerError> {
+    ensure_hosts(&app).await?;
+    emit_status(&app).await;
+    Ok(status(&app).await)
+}
+
+#[tauri::command]
+pub fn open_url(app: AppHandle, url: String) -> Result<(), String> {
+    // Só endereços locais do Sentinel.
+    if !url.starts_with("http://") {
+        return Err("endereço inválido".into());
+    }
+    app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
+}
+
+/// Depois de editar projetos ou trocar o PHP: rotas novas e, se um projeto
+/// online mudou de domínio, o hosts (pode pedir UAC, porque foi a pessoa que mudou).
+pub fn after_change(app: &AppHandle, hosts_too: bool) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let any_online = app.state::<AppState>().projects.lock().unwrap().projects.iter().any(|p| p.online);
+        if hosts_too && any_online && let Err(e) = ensure_hosts(&app).await {
+            app.state::<ServerState>().hosts_outdated.store(true, std::sync::atomic::Ordering::Relaxed);
+            let _ = app.emit("server-error", &e);
+        }
+        if let Err(e) = refresh(&app).await {
+            let _ = app.emit("server-error", &e);
+        }
+    });
+}
+
+/// Ao abrir o Sentinel: religa os projetos que estavam online. Não pede UAC
+/// sozinho; se o hosts estiver desatualizado, a interface oferece corrigir.
+pub fn start(app: &AppHandle) {
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        // Desliga pools parados de tempos em tempos.
+        let reaper = app.clone();
+        tauri::async_runtime::spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_secs(30)).await;
+                reaper.state::<ServerState>().pools.reap_idle().await;
+            }
+        });
+
+        let any_online = app.state::<AppState>().projects.lock().unwrap().projects.iter().any(|p| p.online);
+        if any_online && !hosts::is_up_to_date(&wanted_hosts(&app)) {
+            app.state::<ServerState>().hosts_outdated.store(true, std::sync::atomic::Ordering::Relaxed);
+        }
+        if let Err(e) = refresh(&app).await {
+            tracing::warn!("servidor não iniciou: {}", e.message);
+            let _ = app.emit("server-error", &e);
+        }
+    });
+}
+
+/// Ao sair: para tudo (o Job Object garante o mesmo se o app travar).
+pub fn shutdown(app: &AppHandle) {
+    let server = app.state::<ServerState>();
+    tauri::async_runtime::block_on(async {
+        if let Some(g) = server.gateway.lock().await.take() {
+            g.stop();
+        }
+        server.pools.stop_all().await;
+    });
+}
