@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "./i18n.svelte";
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { inTauri } from "./api";
   import Glyph from "./Glyph.svelte";
@@ -25,13 +26,13 @@
   </div>
 
   <div class="caption-buttons">
-    <button class="cb" title="Minimizar" onclick={() => win?.minimize()}>
+    <button class="cb" title={t("Minimizar")} onclick={() => win?.minimize()}>
       <Glyph name="minimize" size={10} />
     </button>
     <button class="cb" title={maximized ? "Restaurar" : "Maximizar"} onclick={() => win?.toggleMaximize()}>
       <Glyph name={maximized ? "restore" : "maximize"} size={10} />
     </button>
-    <button class="cb close" title="Fechar" onclick={() => win?.close()}>
+    <button class="cb close" title={t("Fechar")} onclick={() => win?.close()}>
       <Glyph name="close" size={10} />
     </button>
   </div>

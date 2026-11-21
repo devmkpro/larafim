@@ -1,5 +1,6 @@
 //! Páginas HTML que o próprio Sentinel mostra (projeto offline, não
 //! encontrado, erro do PHP). Simples, claras e no tema do sistema.
+use sentinel_core::t;
 
 fn escape(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
@@ -7,7 +8,7 @@ fn escape(s: &str) -> String {
 
 fn page(title: &str, message: &str, extra: &str) -> String {
     format!(
-        r#"<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>{title} — Sentinel</title>
+        r#"<!doctype html><html lang="{lang}"><head><meta charset="utf-8"><title>{title} — Sentinel</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
 :root{{color-scheme:light dark;--bg:#f3f3f3;--card:#fff;--text:#1a1a1a;--muted:#5c5c5c;--accent:#0f7b74;--border:#e5e5e5}}
@@ -20,52 +21,53 @@ ul{{margin:8px 0 0;padding-left:20px}} a{{color:var(--accent)}} .brand{{font-siz
 pre{{white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:6px;font:12px/1.5 "Cascadia Mono",Consolas,monospace;max-height:320px;overflow:auto}}
 </style></head><body><main><h1>{title}</h1><p>{message}</p>{extra}<div class="brand">Sentinel</div></main></body></html>"#,
         title = escape(title),
+        lang = sentinel_core::i18n::language(),
     )
 }
 
 /// Domínio que não pertence a nenhum projeto.
 pub fn unknown_site(host: &str, online: &[String]) -> String {
     let list = if online.is_empty() {
-        "<p>Nenhum projeto está online agora.</p>".to_string()
+        t!("<p>Nenhum projeto está online agora.</p>")
     } else {
         let items: String = online
             .iter()
             .map(|h| format!(r#"<li><a href="http://{0}">{0}</a></li>"#, escape(h)))
             .collect();
-        format!("<p>Projetos online:</p><ul>{items}</ul>")
+        format!("<p>{}</p><ul>{items}</ul>", t!("Projetos online:"))
     };
     page(
-        "Projeto não encontrado",
-        &format!("Nenhum projeto do Sentinel usa o endereço <code>{}</code>.", escape(host)),
+        &t!("Projeto não encontrado"),
+        &t!("Nenhum projeto do Sentinel usa o endereço <code>{host}</code>.", host = escape(host)),
         &list,
     )
 }
 
 pub fn offline(name: &str) -> String {
     page(
-        "Projeto offline",
-        &format!(
-            "O projeto <strong>{}</strong> está desligado. Ligue-o no Sentinel (interruptor Online) e recarregue esta página.",
-            escape(name)
+        &t!("Projeto offline"),
+        &t!(
+            "O projeto <strong>{name}</strong> está desligado. Ligue-o no Sentinel (interruptor Online) e recarregue esta página.",
+            name = escape(name)
         ),
         "",
     )
 }
 
 pub fn forbidden() -> String {
-    page("Acesso negado", "Este arquivo não é servido pelo Sentinel (arquivos ocultos como .env ficam protegidos).", "")
+    page(&t!("Acesso negado"), &t!("Este arquivo não é servido pelo Sentinel (arquivos ocultos como .env ficam protegidos)."), "")
 }
 
 pub fn not_found(path: &str) -> String {
-    page("Página não encontrada", &format!("Não existe nada em <code>{}</code>.", escape(path)), "")
+    page(&t!("Página não encontrada"), &t!("Não existe nada em <code>{path}</code>.", path = escape(path)), "")
 }
 
 pub fn no_php(name: &str) -> String {
     page(
-        "PHP não instalado",
-        &format!(
-            "O projeto <strong>{}</strong> precisa de uma versão do PHP que não está instalada. Instale em Sentinel › Configurações › PHP.",
-            escape(name)
+        &t!("PHP não instalado"),
+        &t!(
+            "O projeto <strong>{name}</strong> precisa de uma versão do PHP que não está instalada. Instale em Sentinel › Configurações › PHP.",
+            name = escape(name)
         ),
         "",
     )
@@ -73,8 +75,8 @@ pub fn no_php(name: &str) -> String {
 
 pub fn php_error(detail: &str) -> String {
     page(
-        "O PHP não respondeu",
-        "O Sentinel não conseguiu executar o PHP deste projeto. Detalhes:",
+        &t!("O PHP não respondeu"),
+        &t!("O Sentinel não conseguiu executar o PHP deste projeto. Detalhes:"),
         &format!("<pre>{}</pre>", escape(detail)),
     )
 }
@@ -82,10 +84,10 @@ pub fn php_error(detail: &str) -> String {
 /// Projeto Node ligado, servidor de dev ainda subindo (recarrega sozinha).
 pub fn node_starting(name: &str) -> String {
     page(
-        "Iniciando…",
-        &format!(
-            "O servidor de desenvolvimento do projeto <strong>{}</strong> está subindo. Esta página recarrega sozinha.",
-            escape(name)
+        &t!("Iniciando…"),
+        &t!(
+            "O servidor de desenvolvimento do projeto <strong>{name}</strong> está subindo. Esta página recarrega sozinha.",
+            name = escape(name)
         ),
         "<script>setTimeout(()=>location.reload(),1500)</script>",
     )
@@ -93,8 +95,8 @@ pub fn node_starting(name: &str) -> String {
 
 pub fn proxy_error(port: u16, detail: &str) -> String {
     page(
-        "Servidor do Node não respondeu",
-        &format!("O Sentinel não conseguiu falar com o servidor de desenvolvimento na porta {port}."),
+        &t!("Servidor do Node não respondeu"),
+        &t!("O Sentinel não conseguiu falar com o servidor de desenvolvimento na porta {port}.", port = port),
         &format!("<pre>{}</pre>", escape(detail)),
     )
 }

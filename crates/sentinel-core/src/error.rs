@@ -2,24 +2,24 @@ use std::path::PathBuf;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("não foi possível localizar a pasta de dados do usuário (%LOCALAPPDATA%)")]
+    #[error("{}", crate::i18n::tr("não foi possível localizar a pasta de dados do usuário (%LOCALAPPDATA%)"))]
     NoDataDir,
 
-    #[error("erro de arquivo em {path}: {source}")]
+    #[error("{}", crate::i18n::tf("erro de arquivo em {path}: {source}", &[("path", &.path.display() as &dyn std::fmt::Display), ("source", &.source as &dyn std::fmt::Display)]))]
     Io {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("arquivo de configuração inválido em {path}: {source}")]
+    #[error("{}", crate::i18n::tf("arquivo de configuração inválido em {path}: {source}", &[("path", &.path.display() as &dyn std::fmt::Display), ("source", &.source as &dyn std::fmt::Display)]))]
     ConfigParse {
         path: PathBuf,
         #[source]
         source: toml::de::Error,
     },
 
-    #[error("não foi possível gravar a configuração: {0}")]
+    #[error("{}", crate::i18n::tf("não foi possível gravar a configuração: {0}", &[("0", &.0 as &dyn std::fmt::Display)]))]
     ConfigSerialize(#[from] toml::ser::Error),
 
     #[error("{0}")]

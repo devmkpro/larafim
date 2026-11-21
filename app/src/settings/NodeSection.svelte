@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { locale, t } from "../lib/i18n.svelte";
   import { onEvent } from "../lib/api";
   import Glyph from "../lib/Glyph.svelte";
   import { nodeApi, type NodeDone, type NodeOverview, type NodeProgress } from "../lib/node";
@@ -45,37 +46,37 @@
   }
 
   async function remove(major: string, version: string) {
-    const ok = await confirm(`Remover o Node ${version}? Projetos que usam essa versão vão pedir outra.`, "Remover Node.js", "Remover");
+    const ok = await confirm(t("Remover o Node {v}? Projetos que usam essa versão vão pedir outra.", { v: version }), t("Remover Node.js"), t("Remover"));
     if (!ok) return;
     await nodeApi.remove(major);
     load();
   }
 
-  const mb = (n: number) => (n / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  const mb = (n: number) => (n / 1024 / 1024).toLocaleString(locale(), { maximumFractionDigits: 1 });
 </script>
 
 <h1>Node.js</h1>
 <p class="lead caption">
-  Versões oficiais de nodejs.org (zip para Windows, conferido pelo SHA-256), com npm e npx. Cada projeto usa a do
-  <span class="mono">.nvmrc</span> / <span class="mono">engines</span>, ou a que você fixar.
+  {t("Versões oficiais de nodejs.org (zip para Windows, conferido pelo SHA-256), com npm e npx. Cada projeto usa a do")}
+  <span class="mono">.nvmrc</span> / <span class="mono">engines</span>{t(", ou a que você fixar.")}
 </p>
 
 {#if overview?.catalog_error}
   <div class="infobar warn">
     <Glyph name="info" />
-    <span>Não foi possível consultar as versões ({overview.catalog_error}).</span>
-    <button class="btn" onclick={() => load(true)}>Tentar de novo</button>
+    <span>{t("Não foi possível consultar as versões ({error}).", { error: overview.catalog_error ?? "" })}</span>
+    <button class="btn" onclick={() => load(true)}>{t("Tentar de novo")}</button>
   </div>
 {/if}
 
 {#if overview}
   <div class="table card">
     <div class="thead section-title">
-      <span>Versão</span>
-      <span>Instalada</span>
+      <span>{t("Versão")}</span>
+      <span>{t("Instalada")}</span>
       <span class="right">
         <button class="btn subtle check" onclick={() => load(true)} disabled={loading}>
-          <Glyph name="refresh" size={12} /> Verificar atualizações
+          <Glyph name="refresh" size={12} /> {t("Verificar atualizações")}
         </button>
       </span>
     </div>
@@ -97,19 +98,19 @@
         <div class="actions">
           {#if p}
             <div class="progress">
-              <span class="caption">{p === "starting" ? "Preparando…" : `Baixando ${mb(p.received)}${p.total ? ` de ${mb(p.total)}` : ""} MB`}</span>
+              <span class="caption">{p === "starting" ? t("Preparando…") : (p.total ? t("Baixando {a} de {b} MB", { a: mb(p.received), b: mb(p.total) }) : t("Baixando {a} MB", { a: mb(p.received) }))}</span>
               <ProgressBar value={p === "starting" || !p.total ? null : p.received / p.total} />
             </div>
-            <button class="btn subtle icon" title="Cancelar" onclick={() => nodeApi.cancel(row.major)}>
+            <button class="btn subtle icon" title={t("Cancelar")} onclick={() => nodeApi.cancel(row.major)}>
               <Glyph name="close" size={12} />
             </button>
           {:else if row.installed}
-            {#if row.update_available}<button class="btn accent" onclick={() => install(row.major)}>Atualizar</button>{/if}
-            <button class="btn subtle icon" title="Remover" onclick={() => remove(row.major, row.installed!)}>
+            {#if row.update_available}<button class="btn accent" onclick={() => install(row.major)}>{t("Atualizar")}</button>{/if}
+            <button class="btn subtle icon" title={t("Remover")} onclick={() => remove(row.major, row.installed!)}>
               <Glyph name="delete" />
             </button>
           {:else if row.latest}
-            <button class="btn" onclick={() => install(row.major)}>Instalar</button>
+            <button class="btn" onclick={() => install(row.major)}>{t("Instalar")}</button>
           {/if}
         </div>
         {#if errors[row.major]}
@@ -119,8 +120,7 @@
     {/each}
   </div>
   <p class="tip caption">
-    No terminal, <span class="mono">node</span>, <span class="mono">npm</span> e <span class="mono">npx</span> usam a versão
-    da pasta (Configurações › Terminal). Para forçar: <span class="mono">$env:SENTINEL_NODE = "22"</span>.
+    {t("No terminal,")} <span class="mono">node</span>, <span class="mono">npm</span> e <span class="mono">npx</span> {t("usam a versão da pasta (Configurações › Terminal). Para forçar:")} <span class="mono">$env:SENTINEL_NODE = "22"</span>.
   </p>
 {:else if loading}
   <div class="loading"><ProgressBar /></div>

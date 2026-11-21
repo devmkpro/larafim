@@ -8,6 +8,7 @@
 //! - `SENTINEL_SHIM_WHICH=1` só mostra a escolha (JSON) e sai;
 //! - `SENTINEL_SHIM_DEBUG=1` mostra a escolha no stderr antes de rodar.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitCode};
 
@@ -70,7 +71,7 @@ fn run(program: &Path, args: Vec<std::ffi::OsString>) -> ExitCode {
             Some(code) => ExitCode::from((code & 0xff) as u8),
             None => ExitCode::from(1),
         },
-        Err(e) => fail(&format!("não foi possível executar {}: {e}", program.display())),
+        Err(e) => fail(&t!("não foi possível executar {a}: {e}", a = program.display(), e = e)),
     }
 }
 
@@ -89,7 +90,7 @@ fn run_node(tool: &str, paths: &Paths, cwd: &Path) -> ExitCode {
         return ExitCode::SUCCESS;
     }
     let Some(node) = sel.node else {
-        return fail(&format!("{}. Instale em Sentinel › Configurações › Node.js.", sel.reason));
+        return fail(&t!("{reason}. Instale em Sentinel › Configurações › Node.js.", reason = sel.reason));
     };
     if std::env::var_os("SENTINEL_SHIM_DEBUG").is_some() {
         eprintln!("sentinel: Node {} — {}", node.version, sel.reason);
@@ -109,8 +110,14 @@ fn run_node(tool: &str, paths: &Paths, cwd: &Path) -> ExitCode {
 fn main() -> ExitCode {
     let tool = tool_name();
     let Some(paths) = sentinel_paths() else {
-        return fail("pasta de dados do Sentinel não encontrada");
+        return fail(&t!("pasta de dados do Sentinel não encontrada"));
     };
+    // Mensagens no idioma escolhido no Sentinel.
+    if let Ok(cfg) = sentinel_core::AppConfig::load(&paths.config_file())
+        && let Some(lang) = cfg.language
+    {
+        sentinel_core::i18n::set_language(&lang);
+    }
     let cwd = std::env::current_dir().unwrap_or_default();
     if matches!(tool.as_str(), "node" | "npm" | "npx") {
         return run_node(&tool, &paths, &cwd);
@@ -123,7 +130,7 @@ fn main() -> ExitCode {
     }
 
     let Some(php) = sel.php.clone() else {
-        return fail(&format!("{}. Instale em Sentinel › Configurações › PHP.", sel.reason));
+        return fail(&t!("{reason}. Instale em Sentinel › Configurações › PHP.", reason = sel.reason));
     };
     if std::env::var_os("SENTINEL_SHIM_DEBUG").is_some() {
         eprintln!("sentinel: PHP {} — {}", php.version, sel.reason);
@@ -134,7 +141,7 @@ fn main() -> ExitCode {
         "composer" => {
             let phar = paths.runtimes_dir().join("composer").join("composer.phar");
             if !phar.is_file() {
-                return fail("Composer não instalado. Instale um PHP pelo Sentinel que ele vem junto.");
+                return fail(&t!("Composer não instalado. Instale um PHP pelo Sentinel que ele vem junto."));
             }
             let mut full = vec![phar.into_os_string()];
             full.extend(args);

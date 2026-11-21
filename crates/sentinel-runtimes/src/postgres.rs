@@ -2,6 +2,7 @@
 //! (zip de ~50 MB por versão, publicado no GitHub com SHA-256), extraído em
 //! `runtimes\postgres\<versão>`.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
@@ -55,7 +56,7 @@ fn major_of(v: &str) -> String {
 /// A build mais nova de cada major estável, da mais nova para a mais antiga.
 pub fn parse_releases(json: &str) -> Result<Vec<PgEntry>> {
     let v: serde_json::Value = serde_json::from_str(json).map_err(|e| Error::Catalog(e.to_string()))?;
-    let releases = v.as_array().ok_or_else(|| Error::Catalog("resposta inesperada do GitHub".into()))?;
+    let releases = v.as_array().ok_or_else(|| Error::Catalog(t!("resposta inesperada do GitHub")))?;
     let mut best: Vec<PgEntry> = Vec::new();
     for r in releases {
         if r["prerelease"].as_bool().unwrap_or(true) || r["draft"].as_bool().unwrap_or(false) {
@@ -143,7 +144,7 @@ pub async fn install(
     let inner = tmp.join(format!("postgresql-{}-{TARGET}", entry.version));
     if !inner.join("bin").join("postgres.exe").is_file() {
         let _ = std::fs::remove_dir_all(&tmp);
-        return Err(Error::Zip("o pacote não contém postgres.exe".into()));
+        return Err(Error::Zip(t!("o pacote não contém postgres.exe")));
     }
     if final_dir.exists() {
         std::fs::remove_dir_all(&final_dir).map_err(|e| Error::io(&final_dir, e))?;

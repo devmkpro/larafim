@@ -1,5 +1,6 @@
 import { api, onEvent, type AppConfig, type AppInfo } from "./api";
 import { applyTheme } from "./theme";
+import { setLanguage } from "./i18n.svelte";
 
 class AppState {
   config = $state<AppConfig | null>(null);
@@ -13,6 +14,7 @@ class AppState {
       this.config = config;
       this.info = info;
       applyTheme(config.theme);
+      setLanguage(config.language);
     } catch (e) {
       this.error = String(e);
     }
@@ -20,6 +22,7 @@ class AppState {
     onEvent<AppConfig>("config-changed", (config) => {
       this.config = config;
       applyTheme(config.theme);
+      setLanguage(config.language);
     });
   }
 
@@ -30,6 +33,7 @@ class AppState {
     const next = { ...previous, ...change };
     this.config = next;
     if (change.theme) applyTheme(change.theme);
+    if (change.language) setLanguage(change.language);
     this.saving = true;
     try {
       this.config = await api.saveConfig(next);
@@ -37,6 +41,7 @@ class AppState {
     } catch (e) {
       this.config = previous;
       applyTheme(previous.theme);
+      setLanguage(previous.language);
       this.error = String(e);
     } finally {
       this.saving = false;

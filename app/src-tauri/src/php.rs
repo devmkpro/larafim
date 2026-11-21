@@ -1,6 +1,7 @@
 //! Comandos de PHP: catálogo, instalar/atualizar/remover, extensões e
 //! verificação de atualizações em segundo plano.
 
+use sentinel_core::t;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -151,13 +152,13 @@ pub async fn php_install(app: AppHandle, php_state: State<'_, PhpState>, minor: 
         .await?
         .into_iter()
         .find(|e| e.minor == minor)
-        .ok_or_else(|| format!("a versão {minor} não está no catálogo"))?;
+        .ok_or_else(|| t!("a versão {minor} não está no catálogo", minor = minor))?;
 
     let cancel = Arc::new(AtomicBool::new(false));
     {
         let mut running = php_state.running.lock().unwrap();
         if running.contains_key(&minor) {
-            return Err(format!("o PHP {minor} já está sendo instalado"));
+            return Err(t!("o PHP {minor} já está sendo instalado", minor = minor));
         }
         running.insert(minor.clone(), cancel.clone());
     }
@@ -209,7 +210,7 @@ pub fn php_cancel(php_state: State<'_, PhpState>, minor: String) {
 #[tauri::command]
 pub async fn php_remove(app: AppHandle, state: State<'_, AppState>, php_state: State<'_, PhpState>, minor: String) -> CmdResult<()> {
     if php_state.running.lock().unwrap().contains_key(&minor) {
-        return Err("espere a instalação terminar".into());
+        return Err(t!("espere a instalação terminar"));
     }
     php::remove_minor(&state.paths, &minor).map_err(|e| e.to_string())?;
     emit_updates(&app).await;
@@ -221,7 +222,7 @@ fn find_installed(state: &AppState, version: &str) -> CmdResult<InstalledPhp> {
     installed(state)
         .into_iter()
         .find(|p| p.version == version)
-        .ok_or_else(|| format!("o PHP {version} não está instalado"))
+        .ok_or_else(|| t!("o PHP {version} não está instalado", version = version))
 }
 
 #[tauri::command]
@@ -245,7 +246,7 @@ pub fn php_set_extension(
     let ext = current
         .iter()
         .find(|e| e.name == name)
-        .ok_or_else(|| format!("extensão {name} não encontrada"))?;
+        .ok_or_else(|| t!("extensão {name} não encontrada", name = name))?;
     let updated = ini::set_extension(&text, &ext.name, enabled, ext.zend);
     ini::write(&p.ini(), &updated).map_err(|e| e.to_string())?;
     tracing::info!(version, name, enabled, "extensão alterada");

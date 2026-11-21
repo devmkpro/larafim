@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import { api, kindLabel, projectUrl } from "../lib/api";
   import Glyph from "../lib/Glyph.svelte";
   import { confirm, php, type PhpMatch } from "../lib/php";
@@ -42,12 +43,12 @@
     try {
       if (kind === "mailpit") {
         const diff = await toolsApi.mailPreview(p.path, kind);
-        const lines = diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? "(comentada)"}`).join("\n");
+        const lines = diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? t("(comentada)")}`).join("\n");
         const ok = await confirm(
-          `Usar o Mailpit? Os e-mails do projeto vão para a caixa local (mail.${app.config?.tld}).` +
-            (lines ? `\n\nMudanças no .env (com cópia em .env.sentinel.bak):\n${lines}` : ""),
-          "E-mail do projeto",
-          "Aplicar",
+          t("Usar o Mailpit? Os e-mails do projeto vão para a caixa local (mail.{tld}).", { tld: app.config?.tld ?? "" }) +
+            (lines ? "\n\n" + t("Mudanças no .env (com cópia em .env.sentinel.bak):") + "\n" + lines : ""),
+          t("E-mail do projeto"),
+          t("Aplicar"),
         );
         if (!ok) {
           mailKey++;
@@ -70,21 +71,21 @@
       if (kind === "s3") {
         const st = await s3.status();
         if (!st.installed) {
-          error = "Instale o storage S3 em Configurações › Serviços.";
+          error = t("Instale o storage S3 em Configurações › Serviços.");
           storageKey++;
           return;
         }
         const pv = await s3.preview(p.path);
-        const lines = pv.diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? "(comentada)"}`).join("\n");
+        const lines = pv.diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? t("(comentada)")}`).join("\n");
         const pkg = pv.needs_package
-          ? `\n\nO Laravel precisa do pacote do S3. Rode no terminal do projeto:\ncomposer require league/flysystem-aws-s3-v3 "^3.0" --with-all-dependencies`
+          ? "\n\n" + t("O Laravel precisa do pacote do S3. Rode no terminal do projeto:") + '\ncomposer require league/flysystem-aws-s3-v3 "^3.0" --with-all-dependencies'
           : "";
         const ok = await confirm(
-          `Usar o storage S3 local? O bucket "${pv.bucket}" será criado.` +
-            (lines ? `\n\nMudanças no .env (com cópia em .env.sentinel.bak):\n${lines}` : "") +
+          t('Usar o storage S3 local? O bucket "{bucket}" será criado.', { bucket: pv.bucket }) +
+            (lines ? "\n\n" + t("Mudanças no .env (com cópia em .env.sentinel.bak):") + "\n" + lines : "") +
             pkg,
-          "Storage do projeto",
-          "Aplicar",
+          t("Storage do projeto"),
+          t("Aplicar"),
         );
         if (!ok) {
           storageKey++;
@@ -208,10 +209,10 @@
   async function removeProject() {
     if (!project) return;
     const ok = await confirm(
-      `Tirar "${project.name}" do Sentinel? Os arquivos do projeto NÃO são apagados.` +
-        (project.root ? " Ele deixa de aparecer na lista; dá para mostrar de novo em Configurações › Pastas de projetos." : ""),
-      "Remover do Sentinel",
-      "Remover",
+      t('Tirar "{name}" do Sentinel? Os arquivos do projeto NÃO são apagados.', { name: project.name }) +
+        (project.root ? " " + t("Ele deixa de aparecer na lista; dá para mostrar de novo em Configurações › Pastas de projetos.") : ""),
+      t("Remover do Sentinel"),
+      t("Remover"),
     );
     if (ok) act(projectsApi.remove(project.path));
   }
@@ -222,7 +223,7 @@
     setTimeout(() => (copied = false), 1500);
   }
 
-  const docrootLabel = (d: string) => (d ? `${d}\\` : "Raiz do projeto");
+  const docrootLabel = (d: string) => (d ? `${d}\\` : t("Raiz do projeto"));
   const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 </script>
 
@@ -231,21 +232,21 @@
     <div class="head">
       <div class="title-row">
         <h2 title={url}>{project.domain}.{app.config.tld}</h2>
-        <button class="btn subtle icon" title={copied ? "Copiado!" : "Copiar endereço"} onclick={copyUrl}>
+        <button class="btn subtle icon" title={copied ? t("Copiado!") : t("Copiar endereço")} onclick={copyUrl}>
           <Glyph name={copied ? "check" : "link"} />
         </button>
         {#if project.status !== "missing"}
-          <button class="btn subtle icon" title="Logs do projeto" onclick={() => (showLogs = true)}>
+          <button class="btn subtle icon" title={t("Logs do projeto")} onclick={() => (showLogs = true)}>
             <Glyph name="logs" />
           </button>
           <button
             class="btn subtle icon"
-            title="Abrir terminal na pasta (php e composer com a versão do projeto)"
+            title={t("Abrir terminal na pasta (php e composer com a versão do projeto)")}
             onclick={() => terminal.openTerminal(project.path).catch((e) => (error = String(e)))}
           >
             <Glyph name="terminal" />
           </button>
-          <button class="btn subtle icon" title="Abrir pasta no Explorador" onclick={() => api.openFolder(project.path)}>
+          <button class="btn subtle icon" title={t("Abrir pasta no Explorador")} onclick={() => api.openFolder(project.path)}>
             <Glyph name="folderOpen" />
           </button>
         {/if}
@@ -263,39 +264,39 @@
     {#if project.status === "new"}
       <div class="notice accent">
         <Glyph name="info" size={14} />
-        <span>Projeto encontrado na pasta, ainda não importado. Importe para configurar e usar.</span>
+        <span>{t("Projeto encontrado na pasta, ainda não importado. Importe para configurar e usar.")}</span>
       </div>
       <div class="buttons">
-        <button class="btn accent" onclick={() => act(projectsApi.import(project.path))}>Importar</button>
-        <button class="btn" onclick={() => onreview(project.path)}>Revisar…</button>
+        <button class="btn accent" onclick={() => act(projectsApi.import(project.path))}>{t("Importar")}</button>
+        <button class="btn" onclick={() => onreview(project.path)}>{t("Revisar…")}</button>
         <span class="grow"></span>
-        <button class="btn subtle" title="Esconder da lista" onclick={() => act(projectsApi.ignore(project.path))}>
-          Ignorar
+        <button class="btn subtle" title={t("Esconder da lista")} onclick={() => act(projectsApi.ignore(project.path))}>
+          {t("Ignorar")}
         </button>
       </div>
     {:else if project.status === "missing"}
       <div class="notice warn">
         <Glyph name="info" size={14} />
-        <span>A pasta deste projeto não existe mais (foi movida, renomeada ou apagada).</span>
+        <span>{t("A pasta deste projeto não existe mais (foi movida, renomeada ou apagada).")}</span>
       </div>
       <div class="buttons">
-        <button class="btn" onclick={removeProject}>Remover do Sentinel</button>
+        <button class="btn" onclick={removeProject}>{t("Remover do Sentinel")}</button>
       </div>
     {:else}
       <div class="status card" class:is-on={project.online}>
         <span class="dot" class:on={project.online} class:busy={switching}></span>
         <div class="status-text">
-          <strong>{switching ? (project.online ? "Desligando…" : "Ligando…") : project.online ? "Online" : "Offline"}</strong>
+          <strong>{switching ? (project.online ? t("Desligando…") : t("Ligando…")) : project.online ? t("Online") : t("Offline")}</strong>
           <span class="caption">
             {#if project.online}
-              {url.replace("http://", "")}
+              {url.replace(/^https?:\/\//, "")}
             {:else}
-              Ligue para acessar no navegador
+              {t("Ligue para acessar no navegador")}
             {/if}
           </span>
         </div>
         <Toggle
-          label="Projeto online"
+          label={t("Projeto online")}
           checked={project.online}
           disabled={switching}
           onchange={(v) => toggleOnline(v)}
@@ -309,23 +310,23 @@
             <span>{capitalize(serverError.message)}</span>
             {#if serverError.code === "port_busy"}
               <span class="caption">
-                Feche o outro programa ou use outra porta (os endereços passam a ter
+                {t("Feche o outro programa ou use outra porta (os endereços passam a ter")}
                 <span class="mono">:{altPort}</span>).
               </span>
             {/if}
             <div class="err-actions">
               {#if serverError.code === "port_busy"}
-                <button class="btn" onclick={useAltPort}>Usar porta {altPort}</button>
-                <button class="btn subtle" onclick={() => toggleOnline(true)}>Tentar de novo</button>
+                <button class="btn" onclick={useAltPort}>{t("Usar porta {port}", { port: altPort })}</button>
+                <button class="btn subtle" onclick={() => toggleOnline(true)}>{t("Tentar de novo")}</button>
               {:else if serverError.code === "uac_denied" || serverError.code === "hosts_failed"}
-                <button class="btn" onclick={() => toggleOnline(true)}>Tentar de novo</button>
+                <button class="btn" onclick={() => toggleOnline(true)}>{t("Tentar de novo")}</button>
               {:else if serverError.code === "no_node"}
                 <button class="btn" onclick={() => api.openSettings("node")}>
-                  {serverError.suggest ? `Instalar Node ${serverError.suggest}` : "Instalar Node.js"}
+                  {serverError.suggest ? t("Instalar Node {v}", { v: serverError.suggest }) : t("Instalar Node.js")}
                 </button>
               {:else if serverError.code === "no_php"}
                 <button class="btn" onclick={() => api.openSettings("php")}>
-                  {serverError.suggest ? `Instalar PHP ${serverError.suggest}` : "Instalar PHP"}
+                  {serverError.suggest ? t("Instalar PHP {v}", { v: serverError.suggest }) : t("Instalar PHP")}
                 </button>
               {/if}
             </div>
@@ -335,22 +336,22 @@
 
       <button class="btn wide" disabled={!project.online} onclick={() => server.openUrl(url)}>
         <Glyph name="globe" />
-        Abrir no navegador
+        {t("Abrir no navegador")}
       </button>
     {/if}
 
     {#if project.status !== "missing"}
       <div class="section">
-        <div class="section-title">Ambiente</div>
+        <div class="section-title">{t("Ambiente")}</div>
 
         <div class="field">
-          <span>Tipo</span>
+          <span>{t("Tipo")}</span>
           <span class="value">{kindLabel[project.kind]}{project.kind !== "node" && project.has_node ? " + Node" : ""}</span>
         </div>
 
         {#if imported}
           <label class="field">
-            <span>Domínio</span>
+            <span>{t("Domínio")}</span>
             <span class="domain">
               <input
                 class="input"
@@ -366,7 +367,7 @@
 
         {#if project.kind !== "node"}
           <div class="field">
-            <span>Versão do PHP</span>
+            <span>{t("Versão do PHP")}</span>
             <div class="select">
               <select
                 disabled={!imported || saving}
@@ -374,38 +375,38 @@
                 onchange={(e) => save({ php: e.currentTarget.value || null })}
               >
                 <option value="">
-                  {match?.installed && !project.php_pin ? `Automática (${match.installed})` : "Automática"}
+                  {match?.installed && !project.php_pin ? t("Automática ({v})", { v: match.installed }) : t("Automática")}
                 </option>
                 {#each match?.available ?? [] as minor (minor)}
                   <option value={minor}>PHP {minor}</option>
                 {/each}
                 {#if project.php_pin && !(match?.available ?? []).includes(project.php_pin)}
-                  <option value={project.php_pin}>PHP {project.php_pin} (não instalado)</option>
+                  <option value={project.php_pin}>{t("PHP {v} (não instalado)", { v: project.php_pin })}</option>
                 {/if}
               </select>
             </div>
           </div>
           <p class="caption hint">
             {project.php_request
-              ? `Pedida pelo projeto: ${project.php_request}`
-              : "O projeto não informa a versão do PHP."}
+              ? t("Pedida pelo projeto: {v}", { v: project.php_request })
+              : t("O projeto não informa a versão do PHP.")}
           </p>
           {#if match && !match.installed}
             <div class="notice warn">
               <Glyph name="info" size={14} />
               <span>
                 {project.php_pin
-                  ? `O PHP ${project.php_pin} não está instalado.`
-                  : "Nenhum PHP instalado atende a este projeto."}
+                  ? t("O PHP {v} não está instalado.", { v: project.php_pin })
+                  : t("Nenhum PHP instalado atende a este projeto.")}
               </span>
               <button class="btn" onclick={() => api.openSettings("php")}>
-                {match.suggest ? `Instalar ${match.suggest}` : "Ver versões"}
+                {match.suggest ? t("Instalar {v}", { v: match.suggest }) : t("Ver versões")}
               </button>
             </div>
           {/if}
 
           <div class="field">
-            <span>Pasta pública</span>
+            <span>{t("Pasta pública")}</span>
             {#if imported}
               <div class="select">
                 <select disabled={saving} value={project.docroot} onchange={(e) => save({ docroot: e.currentTarget.value })}>
@@ -422,9 +423,9 @@
 
         {#if project.has_node}
           <div class="field">
-            <span>Servidor do Node</span>
+            <span>{t("Servidor do Node")}</span>
             <Toggle
-              label="Rodar o servidor de desenvolvimento do Node"
+              label={t("Rodar o servidor de desenvolvimento do Node")}
               checked={project.node_enabled}
               disabled={!imported || saving}
               onchange={(v) => save({ node: v, node_command: project.node_command ?? "npm run dev" })}
@@ -432,7 +433,7 @@
           </div>
           {#if imported && project.node_enabled}
             <label class="field">
-              <span>Comando</span>
+              <span>{t("Comando")}</span>
               <input
                 class="input mono-input"
                 bind:value={nodeCommand}
@@ -444,24 +445,24 @@
           {/if}
           {#if imported}
             <div class="field">
-              <span>Versão do Node</span>
+              <span>{t("Versão do Node")}</span>
               <div class="select">
                 <select
                   disabled={saving}
                   value={project.node_pin ?? ""}
                   onchange={(e) => save({ node_version: e.currentTarget.value || null })}
                 >
-                  <option value="">Automática</option>
+                  <option value="">{t("Automática")}</option>
                   {#each nodeMajors as m (m)}<option value={m}>Node {m}</option>{/each}
                   {#if project.node_pin && !nodeMajors.includes(project.node_pin)}
-                    <option value={project.node_pin}>Node {project.node_pin} (não instalado)</option>
+                    <option value={project.node_pin}>{t("Node {v} (não instalado)", { v: project.node_pin })}</option>
                   {/if}
                 </select>
               </div>
             </div>
           {/if}
           {#if project.node_request}
-            <p class="caption hint">Pedido pelo projeto: {project.node_request}</p>
+            <p class="caption hint">{t("Pedido pelo projeto: {v}", { v: project.node_request })}</p>
           {/if}
           {#if imported && (project.kind === "node" || project.node_enabled)}
             <DevPanel path={project.path} online={project.online} />
@@ -472,38 +473,38 @@
 
     {#if imported && project.kind !== "node"}
       <div class="section">
-        <div class="section-title">Serviços</div>
+        <div class="section-title">{t("Serviços")}</div>
         <DbPanel {project} />
         <div class="field">
-          <span>E-mail</span>
+          <span>{t("E-mail")}</span>
           {#key mailKey}
             <div class="select">
               <select value={project.mail ?? "none"} onchange={(e) => chooseMail(e.currentTarget.value)}>
-                <option value="none">Não gerenciado</option>
-                <option value="mailpit">Mailpit (caixa local)</option>
+                <option value="none">{t("Não gerenciado")}</option>
+                <option value="mailpit">{t("Mailpit (caixa local)")}</option>
               </select>
             </div>
           {/key}
         </div>
         {#if project.mail === "mailpit"}
           <button class="btn wide" onclick={() => toolsApi.openMailpit().catch((e) => (error = String(e)))}>
-            <Glyph name="mail" /> Abrir caixa de e-mails
+            <Glyph name="mail" /> {t("Abrir caixa de e-mails")}
           </button>
         {/if}
         <div class="field">
-          <span>Storage</span>
+          <span>{t("Storage")}</span>
           {#key storageKey}
             <div class="select">
               <select value={project.storage ?? "none"} onchange={(e) => chooseStorage(e.currentTarget.value)}>
-                <option value="none">Não gerenciado</option>
-                <option value="s3">S3 local (RustFS)</option>
+                <option value="none">{t("Não gerenciado")}</option>
+                <option value="s3">{t("S3 local (RustFS)")}</option>
               </select>
             </div>
           {/key}
         </div>
         {#if project.storage === "s3"}
           <button class="btn wide" onclick={() => s3.open().catch((e) => (error = String(e)))}>
-            <Glyph name="openExternal" /> Abrir painel do storage
+            <Glyph name="openExternal" /> {t("Abrir painel do storage")}
           </button>
         {/if}
       </div>
@@ -519,12 +520,12 @@
       <div class="footer">
         <button class="btn subtle danger" onclick={removeProject}>
           <Glyph name="delete" />
-          Remover do Sentinel
+          {t("Remover do Sentinel")}
         </button>
       </div>
     {/if}
   {:else}
-    <div class="none caption">Selecione um projeto para ver os detalhes.</div>
+    <div class="none caption">{t("Selecione um projeto para ver os detalhes.")}</div>
   {/if}
 </aside>
 

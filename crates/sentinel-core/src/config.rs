@@ -19,9 +19,15 @@ pub enum Theme {
 #[serde(default)]
 pub struct AppConfig {
     pub theme: Theme,
+    /// Idioma da interface ("pt-BR", "en"…). Vazio = ainda não escolhido.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
     /// Sufixo dos domínios locais, sem ponto. Ex.: `offline` → `loja.offline`.
     pub tld: String,
     pub http_port: u16,
+    /// HTTPS local ligado (gateway também em `https_port`, certificado da CA do Sentinel).
+    pub https: bool,
+    pub https_port: u16,
     /// Pastas raiz onde cada subpasta é candidata a projeto.
     pub roots: Vec<PathBuf>,
     pub start_with_windows: bool,
@@ -73,16 +79,16 @@ impl DbConnection {
     pub fn validate(&self) -> Result<()> {
         let id_ok = !self.id.is_empty() && self.id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
         if !id_ok {
-            return Err(Error::Invalid("identificador da conexão inválido".into()));
+            return Err(Error::Invalid(crate::t!("identificador da conexão inválido")));
         }
         if self.kind != "mysql" && self.kind != "mariadb" {
-            return Err(Error::Invalid("tipo de banco deve ser MySQL ou MariaDB".into()));
+            return Err(Error::Invalid(crate::t!("tipo de banco deve ser MySQL ou MariaDB")));
         }
         if self.name.trim().is_empty() || self.host.trim().is_empty() || self.user.trim().is_empty() {
-            return Err(Error::Invalid("preencha nome, servidor e usuário".into()));
+            return Err(Error::Invalid(crate::t!("preencha nome, servidor e usuário")));
         }
         if self.port == 0 {
-            return Err(Error::Invalid("porta inválida".into()));
+            return Err(Error::Invalid(crate::t!("porta inválida")));
         }
         Ok(())
     }
@@ -92,8 +98,11 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             theme: Theme::System,
+            language: None,
             tld: "offline".into(),
             http_port: 80,
+            https: false,
+            https_port: 443,
             roots: Vec::new(),
             start_with_windows: false,
             keep_in_tray: true,
@@ -144,7 +153,7 @@ impl AppConfig {
             )));
         }
         if self.http_port == 0 {
-            return Err(Error::Invalid("a porta HTTP não pode ser 0".into()));
+            return Err(Error::Invalid(crate::t!("a porta HTTP não pode ser 0")));
         }
         Ok(())
     }

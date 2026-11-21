@@ -1,6 +1,7 @@
 //! Liga o servidor do Sentinel ao app: rotas a partir dos projetos, gateway
 //! na porta configurada, arquivo hosts e projetos online/offline.
 
+use sentinel_core::t;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
@@ -23,6 +24,8 @@ pub struct ServerState {
     routes: SharedRoutes,
     pools: Arc<Pools>,
     gateway: tokio::sync::Mutex<Option<Gateway>>,
+    /// Gateway HTTPS (porta própria, com o certificado da CA local).
+    gateway_tls: tokio::sync::Mutex<Option<(Gateway, String)>>,
     /// Hosts do Windows desatualizados para os projetos online.
     hosts_outdated: std::sync::atomic::AtomicBool,
     /// Servidores de desenvolvimento do Node.
@@ -42,6 +45,7 @@ impl ServerState {
             routes: Arc::new(RwLock::new(Routes::default())),
             pools: Pools::new(PoolSettings::default()),
             gateway: tokio::sync::Mutex::new(None),
+            gateway_tls: tokio::sync::Mutex::new(None),
             hosts_outdated: false.into(),
             dev: DevServers::new(move |e| {
                 let _ = tx.send(e);
@@ -62,7 +66,7 @@ pub struct OnlineSite {
 pub struct ServerStatus {
     running: bool,
     port: u16,
-    online: Vec<OnlineSite>,
+    pub(crate) online: Vec<OnlineSite>,
     /// Versões do PHP com processos rodando agora.
     php_running: Vec<String>,
     /// Servidores do Node rodando agora.
@@ -261,8 +265,42 @@ pub async fn refresh(app: &AppHandle) -> Result<(), ServerError> {
         Ok(())
     };
     drop(gateway);
+    let result = result.and(refresh_tls(app, any_online).await);
     emit_status(app).await;
     result
+}
+
+/// Gateway HTTPS: ligado junto com o HTTP quando o HTTPS está ativo.
+async fn refresh_tls(app: &AppHandle, any_online: bool) -> Result<(), ServerError> {
+    let (wanted, port, tld) = {
+        let c = app.state::<AppState>().config.lock().unwrap().clone();
+        (c.https && any_online, c.https_port, c.tld.clone())
+    };
+    let server = app.state::<ServerState>();
+    let mut tls = server.gateway_tls.lock().await;
+    // Porta ou domínio mudaram: reinicia (o certificado depende do domínio).
+    if let Some((g, t)) = tls.take() {
+        if wanted && g.port() == port && t == tld {
+            *tls = Some((g, t));
+            return Ok(());
+        }
+        g.stop();
+    }
+    if !wanted {
+        return Ok(());
+    }
+    if let Err(owner) = check_free(port) {
+        let who = owner.map(|o| o.name).unwrap_or_else(|| t!("outro programa"));
+        return Err(ServerError::new("https_port", t!("A porta {port} (HTTPS) já está em uso por {who}.", port = port, who = who)));
+    }
+    let config = crate::https::server_config(app).map_err(|m| ServerError::new("error", m))?;
+    match Gateway::start_tls(port, server.routes.clone(), server.pools.clone(), config).await {
+        Ok(g) => {
+            *tls = Some((g, tld));
+            Ok(())
+        }
+        Err(e) => Err(ServerError::new("https_port", t!("HTTPS na porta {port}: {e}", port = port, e = e))),
+    }
 }
 
 async fn start_gateway(port: u16, routes: SharedRoutes, pools: Arc<Pools>) -> Result<Gateway, ServerError> {
@@ -273,17 +311,17 @@ async fn start_gateway(port: u16, routes: SharedRoutes, pools: Arc<Pools>) -> Re
                 Some(h) => format!("{} ({h})", o.name),
                 None => o.name.clone(),
             })
-            .unwrap_or_else(|| "outro programa".into());
+            .unwrap_or_else(|| t!("outro programa"));
         return Err(ServerError {
             code: "port_busy",
-            message: format!("A porta {port} está ocupada por {who}."),
+            message: t!("A porta {port} está ocupada por {who}.", port = port, who = who),
             owner,
             suggest: None,
         });
     }
     Gateway::start(port, routes, pools).await.map_err(|e| ServerError {
         code: "port_busy",
-        message: format!("Não foi possível usar a porta {port}: {e}"),
+        message: t!("Não foi possível usar a porta {port}: {e}", port = port, e = e),
         owner: None,
         suggest: None,
     })
@@ -292,9 +330,9 @@ async fn start_gateway(port: u16, routes: SharedRoutes, pools: Arc<Pools>) -> Re
 pub async fn status(app: &AppHandle) -> ServerStatus {
     let state = app.state::<AppState>();
     let server = app.state::<ServerState>();
-    let (tld, port) = {
+    let (port, cfg) = {
         let c = state.config.lock().unwrap();
-        (c.tld.clone(), c.http_port)
+        (c.http_port, c.clone())
     };
     let running = server.gateway.lock().await.is_some();
     let online = state
@@ -306,7 +344,7 @@ pub async fn status(app: &AppHandle) -> ServerStatus {
         .filter(|p| p.online)
         .map(|p| OnlineSite {
             name: p.domain.clone(),
-            url: project_url(&p.domain, &tld, port),
+            url: public_url(&p.domain, &cfg),
             path: p.path.clone(),
         })
         .collect();
@@ -329,6 +367,14 @@ fn project_url(domain: &str, tld: &str, port: u16) -> String {
     if port == 80 { format!("http://{domain}.{tld}") } else { format!("http://{domain}.{tld}:{port}") }
 }
 
+/// Endereço para abrir no navegador: HTTPS quando ligado.
+fn public_url(domain: &str, c: &sentinel_core::AppConfig) -> String {
+    if !c.https {
+        return project_url(domain, &c.tld, c.http_port);
+    }
+    if c.https_port == 443 { format!("https://{domain}.{}", c.tld) } else { format!("https://{domain}.{}:{}", c.tld, c.https_port) }
+}
+
 async fn emit_status(app: &AppHandle) {
     let s = status(app).await;
     crate::tray::update_online(app, &s.online);
@@ -339,7 +385,7 @@ fn set_online_flag(app: &AppHandle, path: &std::path::Path, online: bool) -> Res
     let state = app.state::<AppState>();
     let mut store = state.projects.lock().unwrap();
     let Some(cfg) = store.projects.iter_mut().find(|p| sentinel_core::store::same_path(&p.path, path)) else {
-        return Err(ServerError::new("error", "importe o projeto antes de deixá-lo online"));
+        return Err(ServerError::new("error", t!("importe o projeto antes de deixá-lo online")));
     };
     cfg.online = online;
     store.save(&state.paths.projects_file()).map_err(|e| ServerError::new("error", e.to_string()))
@@ -357,13 +403,13 @@ pub async fn set_project_online(app: AppHandle, path: PathBuf, online: bool) -> 
         let view = views(&app.state::<AppState>())
             .into_iter()
             .find(|v| sentinel_core::store::same_path(&v.path, &path))
-            .ok_or_else(|| ServerError::new("error", "projeto não encontrado"))?;
+            .ok_or_else(|| ServerError::new("error", t!("projeto não encontrado")))?;
         if view.status != ProjectStatus::Imported {
-            return Err(ServerError::new("error", "importe o projeto antes de deixá-lo online"));
+            return Err(ServerError::new("error", t!("importe o projeto antes de deixá-lo online")));
         }
         let installed = rphp::list_installed(&app.state::<AppState>().paths.php_dir());
         if let (None, true) = php_for(&view, &installed) {
-            let mut e = ServerError::new("no_php", "Nenhum PHP instalado atende a este projeto.");
+            let mut e = ServerError::new("no_php", t!("Nenhum PHP instalado atende a este projeto."));
             e.suggest = view.php_pin.clone();
             return Err(e);
         }
@@ -451,9 +497,18 @@ pub async fn fix_hosts(app: AppHandle) -> Result<ServerStatus, ServerError> {
 
 #[tauri::command]
 pub fn open_url(app: AppHandle, url: String) -> Result<(), String> {
-    // Só endereços locais do Sentinel.
-    if !url.starts_with("http://") {
-        return Err("endereço inválido".into());
+    // Só endereços do Sentinel: domínio local (http/https) ou localhost.
+    let tld = app.state::<AppState>().config.lock().unwrap().tld.clone();
+    let host = url
+        .strip_prefix("http://")
+        .or_else(|| url.strip_prefix("https://"))
+        .and_then(|r| r.split(['/', '?', '#']).next())
+        .map(|h| h.split(':').next().unwrap_or_default().to_lowercase())
+        .unwrap_or_default();
+    let allowed = host.ends_with(&format!(".{tld}"))
+        || (url.starts_with("http://") && (host == "localhost" || host == "127.0.0.1"));
+    if !allowed {
+        return Err(t!("endereço inválido"));
     }
     app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
 }
@@ -542,6 +597,9 @@ pub fn shutdown(app: &AppHandle) {
         if let Some(g) = server.gateway.lock().await.take() {
             g.stop();
         }
+        if let Some((g, _)) = server.gateway_tls.lock().await.take() {
+            g.stop();
+        }
         server.pools.stop_all().await;
         app.state::<crate::services::ServicesState>().maria.stop().await;
         crate::services::stop_all_own(app).await;
@@ -578,7 +636,7 @@ fn start_dev(app: &AppHandle, v: &ProjectView) -> Result<(), ServerError> {
         .node_command
         .clone()
         .filter(|c| !c.trim().is_empty())
-        .ok_or_else(|| ServerError::new("no_command", "Informe o comando do Node do projeto (ex.: npm run dev)."))?;
+        .ok_or_else(|| ServerError::new("no_command", t!("Informe o comando do Node do projeto (ex.: npm run dev).")))?;
     let sel = rnode::select(&state.paths, &v.path);
     let Some(node) = sel.node else {
         let mut e = ServerError::new("no_node", format!("Node.js: {}.", sel.reason));
@@ -603,7 +661,7 @@ fn start_dev(app: &AppHandle, v: &ProjectView) -> Result<(), ServerError> {
     app.state::<ServerState>()
         .dev
         .start(spec)
-        .map_err(|e| ServerError::new("error", format!("Não foi possível iniciar o comando ({command}): {e}")))
+        .map_err(|e| ServerError::new("error", t!("Não foi possível iniciar o comando ({command}): {e}", command = command, e = e)))
 }
 
 #[derive(Serialize)]
@@ -628,9 +686,9 @@ pub async fn restart_dev(app: AppHandle, path: PathBuf) -> Result<(), ServerErro
     let view = views(&app.state::<AppState>())
         .into_iter()
         .find(|v| sentinel_core::store::same_path(&v.path, &path))
-        .ok_or_else(|| ServerError::new("error", "projeto não encontrado"))?;
+        .ok_or_else(|| ServerError::new("error", t!("projeto não encontrado")))?;
     if !view.online || !needs_dev(&view) {
-        return Err(ServerError::new("error", "o projeto não está online com servidor do Node"));
+        return Err(ServerError::new("error", t!("o projeto não está online com servidor do Node")));
     }
     start_dev(&app, &view)?;
     refresh(&app).await

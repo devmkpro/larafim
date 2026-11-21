@@ -125,7 +125,7 @@ pub fn write(project: &Path, changes: &[EnvChange]) -> Result<Vec<DiffLine>> {
 pub fn undo(project: &Path) -> Result<()> {
     let backup = project.join(BACKUP_NAME);
     if !backup.is_file() {
-        return Err(Error::Invalid("não há cópia do .env para restaurar".into()));
+        return Err(Error::Invalid(crate::t!("não há cópia do .env para restaurar")));
     }
     std::fs::copy(&backup, env_path(project)).map_err(|e| Error::io(&backup, e))?;
     std::fs::remove_file(&backup).map_err(|e| Error::io(&backup, e))

@@ -1,6 +1,7 @@
 //! Terminal e linha de comando (fase 4): atalhos `php`/`composer` em
 //! `%LOCALAPPDATA%\Sentinel\bin`, PATH do usuário e abrir terminal no projeto.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 
 use sentinel_runtimes::php::select::{Selection, select};
@@ -43,7 +44,7 @@ pub fn ensure_shims(app: &AppHandle) -> Result<(), String> {
 
 /// Copia o atalho como php.exe/composer.exe. `force` = mesmo se iguais.
 fn install(app: &AppHandle, bin: &Path) -> CmdResult<()> {
-    let source = shim_source(app).ok_or("o atalho (sentinel-shim.exe) não foi encontrado junto do Sentinel")?;
+    let source = shim_source(app).ok_or_else(|| t!("o atalho (sentinel-shim.exe) não foi encontrado junto do Sentinel"))?;
     std::fs::create_dir_all(bin).map_err(|e| e.to_string())?;
     for tool in TOOLS {
         let dest = bin.join(tool);
@@ -54,9 +55,9 @@ fn install(app: &AppHandle, bin: &Path) -> CmdResult<()> {
         if dest.is_file() && std::fs::remove_file(&dest).is_err() {
             let old = dest.with_extension("old");
             let _ = std::fs::remove_file(&old);
-            std::fs::rename(&dest, &old).map_err(|e| format!("{tool} está em uso: {e}"))?;
+            std::fs::rename(&dest, &old).map_err(|e| t!("{tool} está em uso: {e}", tool = tool, e = e))?;
         }
-        std::fs::copy(&source, &dest).map_err(|e| format!("não foi possível criar {tool}: {e}"))?;
+        std::fs::copy(&source, &dest).map_err(|e| t!("não foi possível criar {tool}: {e}", tool = tool, e = e))?;
     }
     tracing::info!(bin = %bin.display(), "atalhos php/composer instalados");
     Ok(())
@@ -220,7 +221,7 @@ pub fn set_shims_in_path(app: AppHandle, state: State<'_, AppState>, enabled: bo
     let current = reg::user_path();
     let updated = if enabled { path_with(&current, &bin_s) } else { path_without(&current, &bin_s) };
     if updated != current {
-        reg::set_user_path(&updated).map_err(|e| format!("não foi possível alterar o PATH: {e}"))?;
+        reg::set_user_path(&updated).map_err(|e| t!("não foi possível alterar o PATH: {e}", e = e))?;
         tracing::info!(enabled, "PATH do usuário alterado");
     }
     Ok(status(&app, &state))
@@ -237,7 +238,7 @@ pub fn php_for_folder(state: State<'_, AppState>, path: PathBuf) -> Selection {
 #[tauri::command]
 pub fn open_terminal(app: AppHandle, state: State<'_, AppState>, path: PathBuf) -> CmdResult<()> {
     if !path.is_dir() {
-        return Err(format!("a pasta {} não existe", path.display()));
+        return Err(t!("a pasta {a} não existe", a = path.display()));
     }
     let bin = state.paths.bin_dir();
     install(&app, &bin)?;
@@ -257,13 +258,13 @@ pub fn open_terminal(app: AppHandle, state: State<'_, AppState>, path: PathBuf) 
             .spawn(),
         None => std::process::Command::new("cmd.exe")
             .arg("/K")
-            .arg("echo Terminal do Sentinel: php e composer usam a versao do projeto.")
+            .arg(format!("echo {}", t!("Terminal do Sentinel: php e composer usam a versao do projeto.")))
             .current_dir(&path)
             .env("PATH", &env_path)
             .creation_flags(CREATE_NEW_CONSOLE)
             .spawn(),
     };
-    result.map(|_| ()).map_err(|e| format!("não foi possível abrir o terminal: {e}"))
+    result.map(|_| ()).map_err(|e| t!("não foi possível abrir o terminal: {e}", e = e))
 }
 
 /// Ao abrir o Sentinel: se os atalhos já existem, atualiza para a versão

@@ -3,6 +3,7 @@
 pub mod config;
 pub mod envfile;
 pub mod error;
+pub mod i18n;
 pub mod logging;
 pub mod paths;
 pub mod projects;

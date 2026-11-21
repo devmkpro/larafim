@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import Glyph from "../lib/Glyph.svelte";
   import { pickFolder } from "../lib/folders";
   import { services, type ConnectionInput } from "../lib/services";
@@ -26,7 +27,7 @@
     testing = true;
     result = null;
     try {
-      result = { ok: true, text: `Conectou: versão ${await services.testConnection(input())}` };
+      result = { ok: true, text: t("Conectou: versão {v}", { v: await services.testConnection(input()) }) };
     } catch (e) {
       result = { ok: false, text: String(e) };
     } finally {
@@ -47,7 +48,7 @@
   }
 
   async function chooseClientDir() {
-    const dir = await pickFolder("Pasta com mysql.exe e mysqldump.exe (ex.: ...\\mysql-8.0\\bin)");
+    const dir = await pickFolder(t("Pasta com mysql.exe e mysqldump.exe (ex.: ...\\mysql-8.0\\bin)"));
     if (dir) form.client_dir = dir;
   }
 </script>
@@ -57,46 +58,46 @@
 <div class="smoke" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="conn-title">
     <div class="content">
-      <h2 id="conn-title">{initial.id ? "Editar banco" : "Usar um banco que já tenho"}</h2>
+      <h2 id="conn-title">{initial.id ? t("Editar banco") : t("Usar um banco que já tenho")}</h2>
       <p class="caption">
-        O Sentinel não liga nem desliga esse servidor: só cria bancos nele, ajusta o .env dos projetos e faz backups.
+        {t("O Sentinel não liga nem desliga esse servidor: só cria bancos nele, ajusta o .env dos projetos e faz backups.")}
       </p>
 
-      <label class="row"><span>Nome</span><input class="input" bind:value={form.name} placeholder="MySQL do Laragon" /></label>
+      <label class="row"><span>{t("Nome")}</span><input class="input" bind:value={form.name} placeholder={t("MySQL do Laragon")} /></label>
       <div class="row">
-        <span>Tipo</span>
+        <span>{t("Tipo")}</span>
         <div class="select">
           <select bind:value={form.kind}>
-            <option value="mysql">MySQL</option>
+            <option value="mysql">{t("MySQL")}</option>
             <option value="mariadb">MariaDB</option>
           </select>
         </div>
       </div>
       <div class="row">
-        <span>Servidor</span>
+        <span>{t("Servidor")}</span>
         <span class="pair">
           <input class="input host" bind:value={form.host} />
           <span class="caption">:</span>
           <input class="input port" type="number" bind:value={form.port} />
         </span>
       </div>
-      <label class="row"><span>Usuário</span><input class="input" bind:value={form.user} /></label>
+      <label class="row"><span>{t("Usuário")}</span><input class="input" bind:value={form.user} /></label>
       <div class="row">
-        <span>Senha</span>
+        <span>{t("Senha")}</span>
         {#if changePassword}
-          <input class="input" type="password" bind:value={password} placeholder="vazia = sem senha" autocomplete="off" />
+          <input class="input" type="password" bind:value={password} placeholder={t("vazia = sem senha")} autocomplete="off" />
         {:else}
           <span class="pair">
-            <span class="caption">Guardada (protegida pelo Windows)</span>
-            <button class="btn subtle" onclick={() => (changePassword = true)}>Trocar</button>
+            <span class="caption">{t("Guardada (protegida pelo Windows)")}</span>
+            <button class="btn subtle" onclick={() => (changePassword = true)}>{t("Trocar")}</button>
           </span>
         {/if}
       </div>
       <div class="row">
-        <span>Programas</span>
+        <span>{t("Programas")}</span>
         <span class="pair">
-          <span class="caption dir" title={form.client_dir ?? ""}>{form.client_dir ?? "Automático"}</span>
-          <button class="btn subtle icon" title="Escolher pasta do mysql.exe" onclick={chooseClientDir}><Glyph name="folderOpen" /></button>
+          <span class="caption dir" title={form.client_dir ?? ""}>{form.client_dir ?? t("Automático")}</span>
+          <button class="btn subtle icon" title={t("Escolher pasta do mysql.exe")} onclick={chooseClientDir}><Glyph name="folderOpen" /></button>
         </span>
       </div>
 
@@ -108,10 +109,10 @@
       {/if}
     </div>
     <div class="footer">
-      <button class="btn" onclick={test} disabled={testing}>{testing ? "Testando…" : "Testar conexão"}</button>
+      <button class="btn" onclick={test} disabled={testing}>{testing ? t("Testando…") : t("Testar conexão")}</button>
       <span class="grow"></span>
-      <button class="btn accent" onclick={save} disabled={saving}>Salvar</button>
-      <button class="btn" onclick={onclose}>Cancelar</button>
+      <button class="btn accent" onclick={save} disabled={saving}>{t("Salvar")}</button>
+      <button class="btn" onclick={onclose}>{t("Cancelar")}</button>
     </div>
   </div>
 </div>

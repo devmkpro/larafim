@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { locale, t } from "../lib/i18n.svelte";
   import Glyph from "../lib/Glyph.svelte";
   import { confirm } from "../lib/php";
   import type { Project } from "../lib/projects";
@@ -81,12 +82,12 @@
   async function choose(kind: DbKind) {
     error = null;
     if (kind === "none") {
-      await act(() => services.dbApply(project.path, "none"), "O Sentinel deixou de gerenciar o banco deste projeto (o .env não foi alterado).");
+      await act(() => services.dbApply(project.path, "none"), t("O Sentinel deixou de gerenciar o banco deste projeto (o .env não foi alterado)."));
       return;
     }
     try {
       if (kind === "postgres" && !pgInstalled) {
-        error = "Instale o PostgreSQL em Configurações › Serviços.";
+        error = t("Instale o PostgreSQL em Configurações › Serviços.");
         selectKey++;
         return;
       }
@@ -97,7 +98,7 @@
           port: project.db_port ?? (await services.suggestOwnPort(project.path)),
         };
         if (!own.version) {
-          error = "Instale ao menos uma versão do MariaDB em Configurações › Serviços.";
+          error = t("Instale ao menos uma versão do MariaDB em Configurações › Serviços.");
           selectKey++;
           return;
         }
@@ -135,7 +136,7 @@
     preview = null;
     await act(
       () => services.dbApply(project.path, kind, ownValue),
-      kind === "sqlite" ? "SQLite configurado no .env." : `Banco ${dbName} pronto e .env atualizado.`,
+      kind === "sqlite" ? t("SQLite configurado no .env.") : t("Banco {db} pronto e .env atualizado.", { db: dbName }),
     );
   }
 
@@ -143,7 +144,7 @@
     const b = backups.find((x) => x.file === restoreFile);
     if (!b) return;
     const ok = await confirm(
-      `Restaurar "${b.name}" no banco ${dbName}? As tabelas que estão no arquivo serão substituídas pelas do backup.`,
+      t('Restaurar "{file}" no banco {db}? As tabelas que estão no arquivo serão substituídas pelas do backup.', { file: b.name, db: dbName }),
       "Restaurar backup",
       "Restaurar",
     );
@@ -152,26 +153,26 @@
 
   async function undoEnv() {
     const ok = await confirm(
-      "Voltar o .env para como estava antes da primeira mudança feita pelo Sentinel?",
-      "Desfazer mudanças no .env",
+      t("Voltar o .env para como estava antes da primeira mudança feita pelo Sentinel?"),
+      t("Desfazer mudanças no .env"),
       "Desfazer",
     );
     if (ok) act(() => services.envUndo(project.path), ".env restaurado.");
   }
 
-  const when = (s: number) => new Date(s * 1000).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
-  const kb = (n: number) => `${Math.max(1, Math.round(n / 1024)).toLocaleString("pt-BR")} KB`;
+  const when = (s: number) => new Date(s * 1000).toLocaleString(locale(), { dateStyle: "short", timeStyle: "short" });
+  const kb = (n: number) => `${Math.max(1, Math.round(n / 1024)).toLocaleString(locale())} KB`;
 </script>
 
 <div class="field">
-  <span>Banco de dados</span>
+  <span>{t("Banco de dados")}</span>
   {#key selectKey}
     <div class="select">
       <select value={current} disabled={busy} onchange={(e) => choose(e.currentTarget.value as DbKind)}>
-        <option value="none">Não gerenciado</option>
+        <option value="none">{t("Não gerenciado")}</option>
         <option value="sqlite">SQLite</option>
-        <option value="mariadb">MariaDB compartilhado</option>
-        <option value="mariadb-own">MariaDB próprio do projeto</option>
+        <option value="mariadb">{t("MariaDB compartilhado")}</option>
+        <option value="mariadb-own">{t("MariaDB próprio do projeto")}</option>
         <option value="postgres">PostgreSQL</option>
         {#each connections as c (c.id)}
           <option value={`external:${c.id}`}>{c.name}</option>
@@ -187,14 +188,14 @@
   <div class="own">
     <span class="dot" class:on={ownStatus?.running}></span>
     <span class="caption grow">
-      MariaDB {project.db_version} só deste projeto · porta {project.db_port} · {ownStatus?.running ? "ligado" : "desligado"}
+      {t("MariaDB {v} só deste projeto · porta {port} · {state}", { v: project.db_version ?? "", port: project.db_port ?? "", state: ownStatus?.running ? t("ligado") : t("desligado") })}
     </span>
     {#if ownStatus?.running}
-      <button class="btn subtle" disabled={busy} onclick={() => act(() => services.ownStop(project.path), "")}>Desligar</button>
+      <button class="btn subtle" disabled={busy} onclick={() => act(() => services.ownStop(project.path), "")}>{t("Desligar")}</button>
     {:else}
-      <button class="btn subtle" disabled={busy} onclick={() => act(() => services.ownStart(project.path), "")}>Ligar</button>
+      <button class="btn subtle" disabled={busy} onclick={() => act(() => services.ownStart(project.path), "")}>{t("Ligar")}</button>
     {/if}
-    <button class="btn subtle icon" title="Trocar versão ou porta" disabled={busy} onclick={() => choose("mariadb-own")}>
+    <button class="btn subtle icon" title={t("Trocar versão ou porta")} disabled={busy} onclick={() => choose("mariadb-own")}>
       <Glyph name="settings" />
     </button>
   </div>
@@ -208,14 +209,14 @@
       <span class="grow"></span>
       <button
         class="btn subtle icon"
-        title={external ? "Abrir no Adminer (pede a senha desse servidor)" : "Abrir no Adminer"}
+        title={external ? t("Abrir no Adminer (pede a senha desse servidor)") : t("Abrir no Adminer")}
         disabled={busy}
         onclick={() => act(() => services.openAdminer(dbName, current === "postgres" ? "postgres" : (external?.id ?? null), isOwn ? project.path : null), "")}
       >
         <Glyph name="openExternal" />
       </button>
-      <button class="btn subtle" disabled={busy} onclick={() => act(() => services.backup(project.path), "Backup criado.")}>
-        Backup
+      <button class="btn subtle" disabled={busy} onclick={() => act(() => services.backup(project.path), t("Backup criado."))}>
+        {t("Backup")}
       </button>
     </div>
     {#if backups.length}
@@ -225,19 +226,19 @@
             {#each backups as b (b.file)}<option value={b.file}>{when(b.modified)} · {kb(b.size)}</option>{/each}
           </select>
         </div>
-        <button class="btn" disabled={busy} onclick={restore}>Restaurar</button>
-        <button class="btn subtle icon" title="Abrir pasta dos backups" onclick={() => services.openBackups(project.path)}>
+        <button class="btn" disabled={busy} onclick={restore}>{t("Restaurar")}</button>
+        <button class="btn subtle icon" title={t("Abrir pasta dos backups")} onclick={() => services.openBackups(project.path)}>
           <Glyph name="folderOpen" />
         </button>
       </div>
     {:else}
-      <p class="caption">Nenhum backup ainda.</p>
+      <p class="caption">{t("Nenhum backup ainda.")}</p>
     {/if}
   </div>
 {/if}
 
 {#if hasEnvBackup}
-  <button class="link caption" onclick={undoEnv}>Desfazer mudanças do Sentinel no .env</button>
+  <button class="link caption" onclick={undoEnv}>{t("Desfazer mudanças do Sentinel no .env")}</button>
 {/if}
 {#if notice}<p class="caption ok">{notice}</p>{/if}
 {#if error}<p class="caption err">{error}</p>{/if}
@@ -248,38 +249,35 @@
       <div class="content">
         <h2 id="envdlg">
           {preview.kind === "mariadb"
-            ? "Usar o MariaDB compartilhado"
+            ? t("Usar o MariaDB compartilhado")
             : preview.kind === "mariadb-own"
-              ? "MariaDB próprio do projeto"
+              ? t("MariaDB próprio do projeto")
               : preview.kind === "sqlite"
-              ? "Usar SQLite"
+              ? t("Usar SQLite")
               : preview.kind === "postgres"
-                ? "Usar o PostgreSQL"
-              : `Usar ${connections.find((c) => `external:${c.id}` === preview!.kind)?.name ?? "banco existente"}`}
+                ? t("Usar o PostgreSQL")
+              : t("Usar {name}", { name: connections.find((c) => `external:${c.id}` === preview!.kind)?.name ?? t("banco existente") })}
         </h2>
         {#if preview.kind.startsWith("external:")}
           <p class="caption">
-            O banco <span class="mono">{preview.data.database}</span> será criado nesse servidor (se ainda não existir).
+            {t("O banco")} <span class="mono">{preview.data.database}</span> {t("será criado nesse servidor (se ainda não existir).")}
           </p>
         {:else if preview.kind === "mariadb"}
           <p class="caption">
-            Um servidor para todos os projetos (mais leve), cada um com seu banco. O banco
-            <span class="mono">{preview.data.database}</span> será criado se ainda não existir.
+            {t("Um servidor para todos os projetos (mais leve), cada um com seu banco. O banco")}
+            <span class="mono">{preview.data.database}</span> {t("será criado se ainda não existir.")}
           </p>
         {:else if preview.kind === "postgres"}
           <p class="caption">
-            O banco <span class="mono">{preview.data.database}</span> será criado no PostgreSQL do Sentinel (se ainda não
-            existir), e as extensões <span class="mono">pgsql</span> e <span class="mono">pdo_pgsql</span> serão ligadas no
-            PHP do projeto.
+            {t("O banco")} <span class="mono">{preview.data.database}</span> {t("será criado no PostgreSQL do Sentinel (se ainda não existir), e as extensões")} <span class="mono">pgsql</span> e <span class="mono">pdo_pgsql</span> {t("serão ligadas no PHP do projeto.")}
           </p>
         {:else if preview.kind === "mariadb-own"}
           <p class="caption">
-            Um servidor só deste projeto, com versão e dados separados. Útil quando o projeto precisa de outra versão do
-            MariaDB. Gasta cerca de 150 MB a mais de memória enquanto estiver ligado.
+            {t("Um servidor só deste projeto, com versão e dados separados. Útil quando o projeto precisa de outra versão do MariaDB. Gasta cerca de 150 MB a mais de memória enquanto estiver ligado.")}
           </p>
           <div class="own-form">
             <label>
-              <span>Versão</span>
+              <span>{t("Versão")}</span>
               <div class="select">
                 <select bind:value={own.version} onchange={refreshOwnPreview}>
                   {#each installedMajors as m (m)}<option value={m}>MariaDB {m}</option>{/each}
@@ -287,19 +285,19 @@
               </div>
             </label>
             <label>
-              <span>Porta</span>
+              <span>{t("Porta")}</span>
               <input class="input port" type="number" min="1024" max="65535" bind:value={own.port} onchange={refreshOwnPreview} />
             </label>
           </div>
-          <p class="caption">Outras versões podem ser instaladas em Configurações › Serviços.</p>
+          <p class="caption">{t("Outras versões podem ser instaladas em Configurações › Serviços.")}</p>
         {:else}
-          <p class="caption">O arquivo <span class="mono">database\database.sqlite</span> será criado se não existir.</p>
+          <p class="caption">{t("O arquivo")} <span class="mono">database\database.sqlite</span> {t("será criado se não existir.")}</p>
         {/if}
         {#if preview.data.no_env}
-          <p class="caption">O projeto não tem .env: nada será escrito nele.</p>
+          <p class="caption">{t("O projeto não tem .env: nada será escrito nele.")}</p>
         {:else}
           {#if preview.data.from_example}
-            <p class="caption">O .env será criado a partir do .env.example.</p>
+            <p class="caption">{t("O .env será criado a partir do .env.example.")}</p>
           {/if}
           <div class="diff card">
             {#each preview.data.diff as d (d.key)}
@@ -310,15 +308,15 @@
                 <span class="after">{d.after === null ? "(comentada)" : d.after === "" ? '""' : d.after}</span>
               </div>
             {:else}
-              <div class="d caption">O .env já está assim. Nada muda.</div>
+              <div class="d caption">{t("O .env já está assim. Nada muda.")}</div>
             {/each}
           </div>
-          <p class="caption">Uma cópia do .env original fica em <span class="mono">.env.sentinel.bak</span> e dá para desfazer.</p>
+          <p class="caption">{t("Uma cópia do .env original fica em")} <span class="mono">.env.sentinel.bak</span> {t("e dá para desfazer.")}</p>
         {/if}
       </div>
       <div class="footer">
-        <button class="btn accent" onclick={apply}>Aplicar</button>
-        <button class="btn" onclick={cancelPreview}>Cancelar</button>
+        <button class="btn accent" onclick={apply}>{t("Aplicar")}</button>
+        <button class="btn" onclick={cancelPreview}>{t("Cancelar")}</button>
       </div>
     </div>
   </div>

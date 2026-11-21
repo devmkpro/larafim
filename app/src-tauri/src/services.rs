@@ -1,6 +1,7 @@
 //! Serviços (fase 6): MariaDB sob demanda, bancos por projeto, `.env`,
 //! backups e Adminer em `db.<domínio>`.
 
+use sentinel_core::t;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
@@ -70,7 +71,7 @@ fn own_setup(app: &AppHandle, path: &Path, own: &OwnDb) -> Result<MariaSetup, St
     let pick = installed
         .iter()
         .find(|m| m.major == own.version)
-        .ok_or_else(|| format!("o MariaDB {} não está instalado (Configurações › Serviços)", own.version))?;
+        .ok_or_else(|| t!("o MariaDB {a} não está instalado (Configurações › Serviços)", a = own.version))?;
     Ok(MariaSetup {
         version: pick.version.clone(),
         install_dir: pick.dir.clone(),
@@ -96,7 +97,7 @@ fn own_of(cfg: &sentinel_core::ProjectConfig) -> Option<OwnDb> {
 /// Liga o MariaDB próprio de um projeto.
 pub async fn start_own(app: &AppHandle, path: &Path) -> Result<(), String> {
     let cfg = project_config(app, path)?;
-    let own = own_of(&cfg).ok_or("o projeto não tem MariaDB próprio configurado")?;
+    let own = own_of(&cfg).ok_or_else(|| t!("o projeto não tem MariaDB próprio configurado"))?;
     let setup = own_setup(app, path, &own)?;
     let r = own_service(app, path).start(&setup).await.map_err(maria_err);
     let _ = app.emit("services-changed", ());
@@ -205,7 +206,7 @@ pub fn maria_setup(app: &AppHandle) -> Result<MariaSetup, String> {
         Some(major) => installed.iter().find(|m| &m.major == major),
         None => installed.first(),
     }
-    .ok_or("o MariaDB não está instalado (Configurações › Serviços)")?;
+    .ok_or_else(|| t!("o MariaDB não está instalado (Configurações › Serviços)"))?;
     Ok(MariaSetup {
         version: pick.version.clone(),
         install_dir: pick.dir.clone(),
@@ -222,8 +223,8 @@ fn maria_err(e: MariaError) -> String {
                     Some(h) => format!("{} ({h})", o.name),
                     None => o.name,
                 })
-                .unwrap_or_else(|| "outro programa".into());
-            format!("A porta {p} já está em uso por {who}. Escolha outra porta para o MariaDB (ex.: {}).", p + 1)
+                .unwrap_or_else(|| t!("outro programa"));
+            t!("A porta {p} já está em uso por {who}. Escolha outra porta para o MariaDB (ex.: {a}).", p = p, who = who, a = p + 1)
         }
         MariaError::Failed(m) => m,
     }
@@ -385,12 +386,12 @@ pub async fn maria_install(app: AppHandle, major: String) -> CmdResult<()> {
         .await?
         .into_iter()
         .find(|e| e.major == major)
-        .ok_or_else(|| format!("o MariaDB {major} não está no catálogo"))?;
+        .ok_or_else(|| t!("o MariaDB {major} não está no catálogo", major = major))?;
     let cancel = Arc::new(AtomicBool::new(false));
     {
         let mut i = state.installing.lock().unwrap();
         if i.contains_key(&major) {
-            return Err("já está instalando".into());
+            return Err(t!("já está instalando"));
         }
         i.insert(major.clone(), cancel.clone());
     }
@@ -430,7 +431,7 @@ pub async fn maria_install(app: AppHandle, major: String) -> CmdResult<()> {
 pub async fn maria_remove(app: AppHandle, major: String) -> CmdResult<()> {
     let st = app.state::<ServicesState>().maria.status().await;
     if st.running && st.version.as_deref().is_some_and(|v| v.starts_with(&format!("{major}."))) {
-        return Err("desligue o MariaDB antes de remover esta versão".into());
+        return Err(t!("desligue o MariaDB antes de remover esta versão"));
     }
     let paths = app.state::<AppState>().paths.clone();
     for m in mariadb::list_installed(&paths.mariadb_dir()).into_iter().filter(|m| m.major == major) {
@@ -458,7 +459,7 @@ pub async fn maria_stop(app: AppHandle) -> CmdResult<()> {
 #[tauri::command]
 pub async fn maria_configure(app: AppHandle, version: Option<String>, port: u16) -> CmdResult<()> {
     if port < 1024 {
-        return Err("use uma porta acima de 1024 (ex.: 3306 ou 3307)".into());
+        return Err(t!("use uma porta acima de 1024 (ex.: 3306 ou 3307)"));
     }
     {
         let state = app.state::<AppState>();
@@ -485,7 +486,7 @@ fn project_config(app: &AppHandle, path: &Path) -> Result<sentinel_core::Project
         .unwrap()
         .find(path)
         .cloned()
-        .ok_or_else(|| "importe o projeto antes".into())
+        .ok_or_else(|| t!("importe o projeto antes"))
 }
 
 fn save_project_cfg(app: &AppHandle, cfg: &sentinel_core::ProjectConfig) -> Result<(), String> {
@@ -513,7 +514,7 @@ fn laravel_connection(project: &Path) -> &'static str {
 
 fn changes_for(app: &AppHandle, project: &Path, domain: &str, kind: &str, own: Option<&OwnDb>) -> Result<Vec<EnvChange>, String> {
     if kind == "mariadb-own" {
-        let own = own.ok_or("escolha a versão e a porta do MariaDB próprio")?;
+        let own = own.ok_or_else(|| t!("escolha a versão e a porta do MariaDB próprio"))?;
         return Ok(vec![
             EnvChange::set("DB_CONNECTION", laravel_connection(project)),
             EnvChange::set("DB_HOST", "127.0.0.1"),
@@ -582,7 +583,7 @@ async fn client_for_project(
             app.state::<ServicesState>().maria.client().await.map_err(maria_err)
         }
         Some(k) if k.starts_with("external:") => crate::dbconn::client_for(app, &crate::dbconn::find(app, &k[9..])?),
-        _ => Err("o projeto não usa MariaDB nem um banco existente".into()),
+        _ => Err(t!("o projeto não usa MariaDB nem um banco existente")),
     }
 }
 
@@ -632,9 +633,9 @@ pub async fn project_db_apply(app: AppHandle, path: PathBuf, kind: String, own: 
     }
     match kind.as_str() {
         "mariadb-own" => {
-            let own = own.clone().ok_or("escolha a versão e a porta do MariaDB próprio")?;
+            let own = own.clone().ok_or_else(|| t!("escolha a versão e a porta do MariaDB próprio"))?;
             if own.port < 1024 || reserved_ports(&app, Some(&path)).contains(&own.port) {
-                return Err(format!("a porta {} já é usada por outro banco do Sentinel", own.port));
+                return Err(t!("a porta {a} já é usada por outro banco do Sentinel", a = own.port));
             }
             // Versão/porta mudaram: o servidor antigo do projeto é desligado.
             if own_of(&cfg).is_some_and(|o| o.version != own.version || o.port != own.port) {
@@ -673,9 +674,9 @@ pub async fn project_db_apply(app: AppHandle, path: PathBuf, kind: String, own: 
                 .await?
                 .create_database(&database_name(&cfg.domain))
                 .await
-                .map_err(|e| format!("não foi possível criar o banco no servidor: {e}"))?;
+                .map_err(|e| t!("não foi possível criar o banco no servidor: {e}", e = e))?;
         }
-        other => return Err(format!("banco desconhecido: {other}")),
+        other => return Err(t!("banco desconhecido: {other}", other = other)),
     }
     if kind != "none" {
         if !env.exists() && path.join(".env.example").exists() {
@@ -779,7 +780,7 @@ pub async fn db_restore(app: AppHandle, path: PathBuf, file: PathBuf) -> CmdResu
     // Só arquivos da pasta de backups deste projeto.
     let dir = backup_dir(&app, &cfg.domain);
     if file.parent().is_none_or(|p| !same_path(p, &dir)) {
-        return Err("arquivo de backup fora da pasta do projeto".into());
+        return Err(t!("arquivo de backup fora da pasta do projeto"));
     }
     if cfg.database.as_deref() == Some("postgres") {
         return crate::pg::client(&app).await?.restore(&database_name(&cfg.domain), &file).await;

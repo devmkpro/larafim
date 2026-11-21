@@ -6,6 +6,7 @@ use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
+use sentinel_core::t;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::server::OnlineSite;
@@ -19,20 +20,20 @@ const URL_PREFIX: &str = "url:";
 
 fn build_menu(app: &AppHandle, online: &[OnlineSite]) -> tauri::Result<Menu<Wry>> {
     let menu = Menu::new(app)?;
-    menu.append(&MenuItem::with_id(app, OPEN, "Abrir Sentinel", true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, OPEN, &t!("Abrir Sentinel"), true, None::<&str>)?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     if online.is_empty() {
-        menu.append(&MenuItem::with_id(app, "none", "Nenhum projeto online", false, None::<&str>)?)?;
+        menu.append(&MenuItem::with_id(app, "none", &t!("Nenhum projeto online"), false, None::<&str>)?)?;
     } else {
         for site in online {
-            let label = site.url.trim_start_matches("http://");
+            let label = site.url.trim_start_matches("http://").trim_start_matches("https://");
             menu.append(&MenuItem::with_id(app, format!("{URL_PREFIX}{}", site.url), label, true, None::<&str>)?)?;
         }
-        menu.append(&MenuItem::with_id(app, STOP_ALL, "Desligar todos os projetos", true, None::<&str>)?)?;
+        menu.append(&MenuItem::with_id(app, STOP_ALL, &t!("Desligar todos os projetos"), true, None::<&str>)?)?;
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, SETTINGS, "Configurações…", true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, QUIT, "Sair do Sentinel", true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, SETTINGS, &t!("Configurações…"), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, QUIT, &t!("Sair do Sentinel"), true, None::<&str>)?)?;
     Ok(menu)
 }
 
@@ -83,8 +84,8 @@ pub fn update_online(app: &AppHandle, online: &[OnlineSite]) {
     }
     let tip = match online.len() {
         0 => "Sentinel".to_string(),
-        1 => "Sentinel — 1 projeto online".to_string(),
-        n => format!("Sentinel — {n} projetos online"),
+        1 => t!("Sentinel — 1 projeto online"),
+        n => t!("Sentinel — {n} projetos online", n = n),
     };
     let _ = tray.set_tooltip(Some(tip));
 }

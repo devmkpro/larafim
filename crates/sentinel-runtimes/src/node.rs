@@ -1,6 +1,7 @@
 //! Node.js para Windows: catálogo oficial (nodejs.org), instalação com
 //! SHA-256 e escolha da versão por pasta.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
@@ -83,7 +84,7 @@ pub fn parse_index(json: &str) -> Result<Vec<NodeEntry>> {
     }
     out.sort_by_key(|e| std::cmp::Reverse(parse(&e.version)));
     if out.is_empty() {
-        return Err(Error::Catalog("nenhuma versão do Node encontrada".into()));
+        return Err(Error::Catalog(t!("nenhuma versão do Node encontrada")));
     }
     Ok(out)
 }
@@ -169,14 +170,14 @@ pub fn select(paths: &Paths, dir: &Path) -> NodeSelection {
         project,
     };
     if installed.is_empty() {
-        return out(None, "nenhum Node instalado no Sentinel".into(), None);
+        return out(None, t!("nenhum Node instalado no Sentinel"), None);
     }
     if let Ok(forced) = std::env::var("SENTINEL_NODE")
         && !forced.trim().is_empty()
     {
         return match best_installed(&forced, &installed) {
             Some(n) => out(Some(n), format!("SENTINEL_NODE={forced}"), None),
-            None => out(None, format!("SENTINEL_NODE={forced}, mas essa versão não está instalada"), None),
+            None => out(None, t!("SENTINEL_NODE={forced}, mas essa versão não está instalada", forced = forced), None),
         };
     }
     let store = ProjectsFile::load(&paths.projects_file()).unwrap_or_default();
@@ -185,18 +186,18 @@ pub fn select(paths: &Paths, dir: &Path) -> NodeSelection {
         && let Some(major) = &cfg.node_version
     {
         return match installed.iter().find(|n| &n.major == major) {
-            Some(n) => out(Some(n), format!("versão fixada no projeto ({major})"), Some(cfg.domain.clone())),
-            None => out(None, format!("o projeto fixa o Node {major}, que não está instalado"), Some(cfg.domain.clone())),
+            Some(n) => out(Some(n), t!("versão fixada no projeto ({major})", major = major), Some(cfg.domain.clone())),
+            None => out(None, t!("o projeto fixa o Node {major}, que não está instalado", major = major), Some(cfg.domain.clone())),
         };
     }
     let project_name = project.map(|p| p.domain.clone());
     if let Some((req, _)) = dir.ancestors().find_map(|a| request_in(a).map(|r| (r, a.to_path_buf()))) {
         return match best_installed(&req, &installed) {
-            Some(n) => out(Some(n), format!("mais novo compatível com {req}"), project_name),
-            None => out(None, format!("a pasta pede Node {req} e nenhuma versão instalada atende"), project_name),
+            Some(n) => out(Some(n), t!("mais novo compatível com {req}", req = req), project_name),
+            None => out(None, t!("a pasta pede Node {req} e nenhuma versão instalada atende", req = req), project_name),
         };
     }
-    out(installed.first(), "mais novo instalado".into(), project_name)
+    out(installed.first(), t!("mais novo instalado"), project_name)
 }
 
 /// Instala uma versão (zip oficial win-x64, conferido pelo SHASUMS256.txt).
@@ -213,7 +214,7 @@ pub async fn install(
     let sha = sums
         .lines()
         .find_map(|l| l.split_once("  ").filter(|(_, f)| f.trim() == file).map(|(h, _)| h.to_string()))
-        .ok_or_else(|| Error::Catalog(format!("{file} não está no SHASUMS256.txt")))?;
+        .ok_or_else(|| Error::Catalog(t!("{file} não está no SHASUMS256.txt", file = file)))?;
 
     let zip_path = paths.downloads_dir().join(&file);
     if !zip_path.is_file() {
@@ -241,7 +242,7 @@ pub async fn install(
     let extracted = tmp.join(&inner);
     if !extracted.join("node.exe").is_file() {
         let _ = std::fs::remove_dir_all(&tmp);
-        return Err(Error::Zip("o pacote não contém node.exe".into()));
+        return Err(Error::Zip(t!("o pacote não contém node.exe")));
     }
     if final_dir.exists() {
         std::fs::remove_dir_all(&final_dir).map_err(|e| Error::io(&final_dir, e))?;

@@ -13,6 +13,8 @@ export default defineConfig({
     host: host || false,
     hmr: host ? { protocol: "ws", host, port: 1421 } : undefined,
     watch: { ignored: ["**/src-tauri/**"] },
+    // Os idiomas ficam em ../locales (compartilhados com o Rust).
+    fs: { allow: [".", "../locales"] },
   },
   envPrefix: ["VITE_", "TAURI_ENV_*"],
   build: {

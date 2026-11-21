@@ -187,7 +187,7 @@ pub fn domain_label(name: &str) -> String {
         }
     }
     let out = out.trim_matches('-').to_string();
-    if out.is_empty() { "projeto".into() } else { out }
+    if out.is_empty() { crate::t!("projeto") } else { out }
 }
 
 fn read_json(path: &Path) -> Option<serde_json::Value> {

@@ -1,5 +1,6 @@
 //! Ferramentas da fase 7: Mailpit (caixa de e-mails local) e Xdebug.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
@@ -35,11 +36,11 @@ pub fn parse_mailpit_release(json: &str) -> Result<(String, String, String)> {
     let asset = v["assets"]
         .as_array()
         .and_then(|a| a.iter().find(|x| x["name"] == MAILPIT_ASSET))
-        .ok_or_else(|| Error::Catalog("Mailpit sem pacote para Windows".into()))?;
+        .ok_or_else(|| Error::Catalog(t!("Mailpit sem pacote para Windows")))?;
     let url = asset["browser_download_url"].as_str().unwrap_or_default().to_string();
     let sha = asset["digest"].as_str().and_then(|d| d.strip_prefix("sha256:")).unwrap_or_default().to_lowercase();
     if !url.starts_with("https://github.com/axllent/mailpit/") || sha.len() != 64 {
-        return Err(Error::Catalog("dados do Mailpit incompletos (sem SHA-256)".into()));
+        return Err(Error::Catalog(t!("dados do Mailpit incompletos (sem SHA-256)")));
     }
     Ok((tag, url, sha))
 }
@@ -146,7 +147,7 @@ pub async fn ensure_xdebug(client: &reqwest::Client, php: &InstalledPhp) -> Resu
     let html = fetch_text(client, "https://xdebug.org/download").await?;
     let builds = parse_xdebug_page(&html);
     let build = pick_xdebug(&builds, &php.minor)
-        .ok_or_else(|| Error::Invalid(format!("ainda não há Xdebug para o PHP {} no Windows", php.minor)))?;
+        .ok_or_else(|| Error::Invalid(t!("ainda não há Xdebug para o PHP {a} no Windows", a = php.minor)))?;
     let dll = xdebug_dll(php);
     let never = AtomicBool::new(false);
     download_verified(

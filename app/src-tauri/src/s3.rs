@@ -1,6 +1,7 @@
 //! Storage S3 local (fase 8): RustFS sob demanda. API em 127.0.0.1:9000,
 //! painel em s3.<domínio> (proxy para 127.0.0.1:9001), um bucket por projeto.
 
+use sentinel_core::t;
 use std::hash::{BuildHasher, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
@@ -105,7 +106,7 @@ pub async fn s3_install(app: AppHandle) -> CmdResult<()> {
     {
         let mut i = INSTALLING.lock().unwrap();
         if *i {
-            return Err("já está instalando".into());
+            return Err(t!("já está instalando"));
         }
         *i = true;
     }
@@ -137,12 +138,12 @@ pub async fn start_s3(app: &AppHandle) -> Result<(), String> {
     }
     let paths = app.state::<AppState>().paths.clone();
     if !s3::rustfs_installed(&paths) {
-        return Err("o storage S3 não está instalado (Configurações › Serviços)".into());
+        return Err(t!("o storage S3 não está instalado (Configurações › Serviços)"));
     }
     for port in [S3_API_PORT, S3_CONSOLE_PORT] {
         if let Err(owner) = sentinel_server::port::check_free(port) {
-            let who = owner.map(|o| o.name).unwrap_or_else(|| "outro programa".into());
-            return Err(format!("a porta {port} (storage S3) está ocupada por {who}"));
+            let who = owner.map(|o| o.name).unwrap_or_else(|| t!("outro programa"));
+            return Err(t!("a porta {port} (storage S3) está ocupada por {who}", port = port, who = who));
         }
     }
     let data = paths.data_dir().join("s3");
@@ -173,7 +174,7 @@ pub async fn start_s3(app: &AppHandle) -> Result<(), String> {
         if !s3_running(app) || started.elapsed() > Duration::from_secs(30) {
             let log = app.state::<ServerState>().dev.logs(S3_KEY).join(" | ");
             app.state::<ServerState>().dev.stop(S3_KEY);
-            return Err(format!("o storage S3 não iniciou: {}", log.chars().rev().take(400).collect::<String>().chars().rev().collect::<String>()));
+            return Err(t!("o storage S3 não iniciou: {a}", a = log.chars().rev().take(400).collect::<String>().chars().rev().collect::<String>()));
         }
         tokio::time::sleep(Duration::from_millis(200)).await;
     }
@@ -212,7 +213,7 @@ fn project_domain(app: &AppHandle, path: &Path) -> Result<String, String> {
         .unwrap()
         .find(path)
         .map(|p| p.domain.clone())
-        .ok_or_else(|| "importe o projeto antes".into())
+        .ok_or_else(|| t!("importe o projeto antes"))
 }
 
 fn changes(bucket: &str, secret: &str) -> Vec<EnvChange> {
@@ -268,7 +269,7 @@ pub async fn project_storage_apply(app: AppHandle, path: PathBuf, kind: String) 
             envfile::write(&path, &changes(&bucket, &secret)).map_err(|e| e.to_string())?;
         }
     } else if kind != "none" {
-        return Err(format!("storage desconhecido: {kind}"));
+        return Err(t!("storage desconhecido: {kind}", kind = kind));
     }
     crate::tools::update_project(&app, &path, |p| p.storage = (kind == "s3").then_some(kind.clone()))?;
     tracing::info!(path = %path.display(), kind, "storage do projeto alterado");

@@ -1,5 +1,6 @@
 //! Catálogo oficial de builds do PHP para Windows (`releases.json`).
 
+use sentinel_core::t;
 use serde::Serialize;
 
 use crate::download::fetch_text;
@@ -33,7 +34,7 @@ pub async fn fetch_catalog(client: &reqwest::Client) -> Result<Vec<CatalogEntry>
 /// Lê o JSON e devolve uma entrada por minor, da mais nova para a mais antiga.
 pub fn parse_catalog(json: &str) -> Result<Vec<CatalogEntry>> {
     let root: serde_json::Value = serde_json::from_str(json).map_err(|e| Error::Catalog(e.to_string()))?;
-    let map = root.as_object().ok_or_else(|| Error::Catalog("raiz não é um objeto".into()))?;
+    let map = root.as_object().ok_or_else(|| Error::Catalog(t!("raiz não é um objeto")))?;
 
     let mut entries = Vec::new();
     for (minor, info) in map {
@@ -73,7 +74,7 @@ pub fn parse_catalog(json: &str) -> Result<Vec<CatalogEntry>> {
     }
 
     if entries.is_empty() {
-        return Err(Error::Catalog("nenhuma versão encontrada".into()));
+        return Err(Error::Catalog(t!("nenhuma versão encontrada")));
     }
     entries.sort_by_key(|e| std::cmp::Reverse(super::parse_version(&e.version)));
     Ok(entries)

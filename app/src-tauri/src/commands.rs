@@ -1,6 +1,7 @@
 //! Comandos chamados pela interface (`invoke`). Erros voltam como texto
 //! legível para mostrar na tela.
 
+use sentinel_core::t;
 use std::path::PathBuf;
 
 use sentinel_core::AppConfig;
@@ -23,12 +24,27 @@ pub fn save_config(app: AppHandle, state: State<'_, AppState>, config: AppConfig
     let mut config = config;
     config.tld = config.tld.trim().trim_start_matches('.').to_lowercase();
     config.roots.dedup();
+    let (was, old_language) = {
+        let c = state.config.lock().map_err(|e| e.to_string())?;
+        (c.start_with_windows, c.language.clone())
+    };
+    if let Some(lang) = config.language.as_deref()
+        && !sentinel_core::i18n::is_supported(lang)
+    {
+        return Err(sentinel_core::t!("idioma não suportado: {lang}", lang = lang));
+    }
+    if was != config.start_with_windows {
+        crate::autostart::set(config.start_with_windows)?;
+    }
 
     config.save(&state.paths.config_file()).map_err(|e| e.to_string())?;
     let previous = std::mem::replace(&mut *state.config.lock().map_err(|e| e.to_string())?, config.clone());
     // Domínio ou porta mudaram: rotas, gateway e hosts acompanham.
     if previous.tld != config.tld || previous.http_port != config.http_port || previous.roots != config.roots {
         crate::server::after_change(&app, previous.tld != config.tld);
+    }
+    if old_language != config.language {
+        crate::language_changed(&app, config.language.as_deref().unwrap_or(sentinel_core::i18n::SOURCE));
     }
     tracing::info!("configuração salva");
     let _ = app.emit("config-changed", &config);
@@ -63,7 +79,7 @@ pub fn open_data_dir(app: AppHandle, state: State<'_, AppState>) -> CmdResult<()
 #[tauri::command]
 pub fn open_folder(app: AppHandle, path: PathBuf) -> CmdResult<()> {
     if !path.is_dir() {
-        return Err(format!("a pasta {} não existe", path.display()));
+        return Err(t!("a pasta {a} não existe", a = path.display()));
     }
     app.opener()
         .open_path(path.display().to_string(), None::<&str>)

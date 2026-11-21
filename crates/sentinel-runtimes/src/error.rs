@@ -3,41 +3,38 @@ use std::path::PathBuf;
 /// Erros com mensagens prontas para mostrar na interface.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("sem conexão ou servidor indisponível: {0}")]
+    #[error("{}", sentinel_core::i18n::tf("sem conexão ou servidor indisponível: {0}", &[("0", &.0 as &dyn std::fmt::Display)]))]
     Http(#[source] reqwest::Error),
 
-    #[error("o servidor respondeu {status} para {url}")]
+    #[error("{}", sentinel_core::i18n::tf("o servidor respondeu {status} para {url}", &[("status", &.status as &dyn std::fmt::Display), ("url", &.url as &dyn std::fmt::Display)]))]
     HttpStatus { status: u16, url: String },
 
-    #[error("o catálogo de versões do PHP veio num formato inesperado: {0}")]
+    #[error("{}", sentinel_core::i18n::tf("o catálogo de versões do PHP veio num formato inesperado: {0}", &[("0", &.0 as &dyn std::fmt::Display)]))]
     Catalog(String),
 
-    #[error("a versão {0} não está no catálogo oficial")]
+    #[error("{}", sentinel_core::i18n::tf("a versão {0} não está no catálogo oficial", &[("0", &.0 as &dyn std::fmt::Display)]))]
     UnknownVersion(String),
 
-    #[error("o arquivo baixado está corrompido (SHA-256 não confere). Tente de novo.")]
+    #[error("{}", sentinel_core::i18n::tr("o arquivo baixado está corrompido (SHA-256 não confere). Tente de novo."))]
     ChecksumMismatch,
 
-    #[error("download cancelado")]
+    #[error("{}", sentinel_core::i18n::tr("download cancelado"))]
     Cancelled,
 
-    #[error("erro de arquivo em {path}: {source}")]
+    #[error("{}", sentinel_core::i18n::tf("erro de arquivo em {path}: {source}", &[("path", &.path.display() as &dyn std::fmt::Display), ("source", &.source as &dyn std::fmt::Display)]))]
     Io {
         path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("não foi possível extrair o arquivo: {0}")]
+    #[error("{}", sentinel_core::i18n::tf("não foi possível extrair o arquivo: {0}", &[("0", &.0 as &dyn std::fmt::Display)]))]
     Zip(String),
 
-    #[error(
-        "o PHP precisa do Microsoft Visual C++ Redistributable (x64) mais recente. \
-         Instale-o e tente de novo."
-    )]
+    #[error("{}", sentinel_core::i18n::tr("o PHP precisa do Microsoft Visual C++ Redistributable (x64) mais recente. Instale-o e tente de novo."))]
     MissingVcRedist,
 
-    #[error("o PHP instalado não respondeu como esperado: {0}")]
+    #[error("{}", sentinel_core::i18n::tf("o PHP instalado não respondeu como esperado: {0}", &[("0", &.0 as &dyn std::fmt::Display)]))]
     Verify(String),
 
     #[error("{0}")]

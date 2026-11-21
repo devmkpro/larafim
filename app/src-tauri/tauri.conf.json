@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "cargo build -p sentinel-shim && npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "cargo build -p sentinel-shim --release && npm run build",
+    "beforeBuildCommand": "node ../scripts/i18n.mjs sync && cargo build -p sentinel-shim --release && npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -29,7 +29,21 @@
     "windows": {
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "PortugueseBR",
+          "English"
+        ],
+        "displayLanguageSelector": true,
+        "installerHooks": "./installer-hooks.nsh"
       }
-    }
+    },
+    "resources": {
+      "../../target/release/sentinel-shim.exe": "sentinel-shim.exe"
+    },
+    "shortDescription": "PHP, Node e bancos locais para seus projetos",
+    "publisher": "Sentinel"
   }
 }

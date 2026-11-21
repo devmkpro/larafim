@@ -1,6 +1,7 @@
 //! MariaDB para Windows: versões LTS da API oficial de downloads, zip
 //! `winx64` conferido pelo SHA-256 e extraído em `runtimes\mariadb\<versão>`.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
@@ -48,7 +49,7 @@ fn version_key(v: &str) -> Vec<u32> {
 /// Linhas estáveis com suporte longo (LTS), da mais nova para a mais antiga.
 pub fn parse_majors(json: &str) -> Result<Vec<(String, Option<String>)>> {
     let v: serde_json::Value = serde_json::from_str(json).map_err(|e| Error::Catalog(e.to_string()))?;
-    let list = v["major_releases"].as_array().ok_or_else(|| Error::Catalog("sem major_releases".into()))?;
+    let list = v["major_releases"].as_array().ok_or_else(|| Error::Catalog(t!("sem major_releases")))?;
     Ok(list
         .iter()
         .filter(|r| r["release_status"] == "Stable" && r["release_support_type"] == "Long Term Support")
@@ -59,7 +60,7 @@ pub fn parse_majors(json: &str) -> Result<Vec<(String, Option<String>)>> {
 /// Última versão de uma linha com o zip `winx64`.
 pub fn parse_release(json: &str, major: &str, eol: Option<String>) -> Result<MariaEntry> {
     let v: serde_json::Value = serde_json::from_str(json).map_err(|e| Error::Catalog(e.to_string()))?;
-    let releases = v["releases"].as_object().ok_or_else(|| Error::Catalog("sem releases".into()))?;
+    let releases = v["releases"].as_object().ok_or_else(|| Error::Catalog(t!("sem releases")))?;
     let mut versions: Vec<&String> = releases.keys().collect();
     versions.sort_by_key(|k| std::cmp::Reverse(version_key(k)));
     for version in versions {
@@ -82,7 +83,7 @@ pub fn parse_release(json: &str, major: &str, eol: Option<String>) -> Result<Mar
             });
         }
     }
-    Err(Error::Catalog(format!("nenhum zip para Windows na linha {major}")))
+    Err(Error::Catalog(t!("nenhum zip para Windows na linha {major}", major = major)))
 }
 
 pub async fn fetch_catalog(client: &reqwest::Client) -> Result<Vec<MariaEntry>> {
@@ -95,7 +96,7 @@ pub async fn fetch_catalog(client: &reqwest::Client) -> Result<Vec<MariaEntry>> 
         }
     }
     if out.is_empty() {
-        return Err(Error::Catalog("nenhuma versão do MariaDB disponível".into()));
+        return Err(Error::Catalog(t!("nenhuma versão do MariaDB disponível")));
     }
     Ok(out)
 }
@@ -150,7 +151,7 @@ pub async fn install(
     let inner = tmp.join(format!("mariadb-{}-winx64", entry.version));
     if !inner.join("bin").join("mariadbd.exe").is_file() {
         let _ = std::fs::remove_dir_all(&tmp);
-        return Err(Error::Zip("o pacote não contém mariadbd.exe".into()));
+        return Err(Error::Zip(t!("o pacote não contém mariadbd.exe")));
     }
     if final_dir.exists() {
         std::fs::remove_dir_all(&final_dir).map_err(|e| Error::io(&final_dir, e))?;

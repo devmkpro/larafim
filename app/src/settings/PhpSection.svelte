@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import { onEvent } from "../lib/api";
   import Glyph from "../lib/Glyph.svelte";
   import {
@@ -71,9 +72,9 @@
 
   async function remove(minor: string, version: string) {
     const ok = await confirm(
-      `Remover o PHP ${version}? Os arquivos desta versão (inclusive o php.ini) serão apagados. Seus projetos não são afetados.`,
-      "Remover PHP",
-      "Remover",
+      t("Remover o PHP {v}? Os arquivos desta versão (inclusive o php.ini) serão apagados. Seus projetos não são afetados.", { v: version }),
+      t("Remover PHP"),
+      t("Remover"),
     );
     if (!ok) return;
     try {
@@ -128,12 +129,12 @@
   </h1>
 
   <div class="detail-actions">
-    <button class="btn" onclick={() => php.openIni(detail!)}><Glyph name="code" /> Abrir php.ini</button>
-    <button class="btn" onclick={() => php.openFolder(detail!)}><Glyph name="folderOpen" /> Abrir pasta</button>
+    <button class="btn" onclick={() => php.openIni(detail!)}><Glyph name="code" /> {t("Abrir php.ini")}</button>
+    <button class="btn" onclick={() => php.openFolder(detail!)}><Glyph name="folderOpen" /> {t("Abrir pasta")}</button>
     <span class="grow"></span>
     <label class="search">
       <Glyph name="search" size={14} />
-      <input class="input" placeholder="Filtrar extensões" bind:value={extFilter} />
+      <input class="input" placeholder={t("Filtrar extensões")} bind:value={extFilter} />
     </label>
   </div>
 
@@ -143,15 +144,14 @@
       <div class="xd-text">
         <strong>Xdebug</strong>
         <span class="caption">
-          {xdebugBusy ? "Baixando e configurando…" : xdebug?.enabled ? "Ligado · porta 9003 · ativa quando a IDE pede (trigger)" : "Desligado (deixa o PHP mais rápido)"}
+          {xdebugBusy ? t("Baixando e configurando…") : xdebug?.enabled ? t("Ligado · porta 9003 · ativa quando a IDE pede (trigger)") : t("Desligado (deixa o PHP mais rápido)")}
         </span>
       </div>
       <Toggle label="Xdebug" checked={xdebug?.enabled ?? false} disabled={xdebugBusy} onchange={setXdebug} />
     </div>
     {#if xdebug?.enabled}
       <p class="caption">
-        No VS Code (extensão PHP Debug), use este <span class="mono">launch.json</span> e inicie a depuração. No navegador,
-        use a extensão "Xdebug helper" para ligar por página.
+        {t("No VS Code (extensão PHP Debug), use este")} <span class="mono">launch.json</span> {t("e inicie a depuração. No navegador, use a extensão \"Xdebug helper\" para ligar por página.")}
       </p>
       <div class="code">
         <pre>{xdebug.launch_json}</pre>
@@ -170,7 +170,7 @@
   {#if extSaved}
     <div class="infobar">
       <Glyph name="info" />
-      <span>Salvo no php.ini. Vale na próxima vez que o PHP iniciar (terminal ou projeto reiniciado).</span>
+      <span>{t("Salvo no php.ini. Vale na próxima vez que o PHP iniciar (terminal ou projeto reiniciado).")}</span>
     </div>
   {/if}
 
@@ -181,17 +181,16 @@
         {#if ext.zend}<span class="tag">zend</span>{/if}
         <span class="grow"></span>
         <span class="caption">{ext.enabled ? "Ligada" : "Desligada"}</span>
-        <Toggle label={`Extensão ${ext.name}`} checked={ext.enabled} onchange={(v) => toggleExt(ext.name, v)} />
+        <Toggle label={t("Extensão {name}", { name: ext.name })} checked={ext.enabled} onchange={(v) => toggleExt(ext.name, v)} />
       </div>
     {:else}
-      <div class="ext caption">Nenhuma extensão encontrada.</div>
+      <div class="ext caption">{t("Nenhuma extensão encontrada.")}</div>
     {/each}
   </div>
 {:else}
   <h1>PHP</h1>
   <p class="lead caption">
-    Versões oficiais para Windows (NTS x64), baixadas de downloads.php.net e conferidas pelo SHA-256.
-    Cada projeto usa a versão mais nova instalada que atende ao que ele pede.
+    {t("Versões oficiais para Windows (NTS x64), baixadas de downloads.php.net e conferidas pelo SHA-256. Cada projeto usa a versão mais nova instalada que atende ao que ele pede.")}
   </p>
 
   {#if loadError || overview?.catalog_error}
@@ -201,18 +200,18 @@
         Não foi possível consultar o catálogo de versões ({overview?.catalog_error ?? loadError}).
         {#if overview?.rows.length}Mostrando só o que já está instalado.{/if}
       </span>
-      <button class="btn" onclick={() => load(true)}>Tentar de novo</button>
+      <button class="btn" onclick={() => load(true)}>{t("Tentar de novo")}</button>
     </div>
   {/if}
 
   {#if overview}
     <div class="table card">
       <div class="thead section-title">
-        <span>Versão</span>
-        <span>Instalada</span>
+        <span>{t("Versão")}</span>
+        <span>{t("Instalada")}</span>
         <span class="right">
           <button class="btn subtle check" onclick={() => load(true)} disabled={loading}>
-            <Glyph name="refresh" size={12} /> Verificar atualizações
+            <Glyph name="refresh" size={12} /> {t("Verificar atualizações")}
           </button>
         </span>
       </div>
@@ -223,7 +222,7 @@
         <div class="tr">
           <div class="version">
             <strong>{row.minor}</strong>
-            {#if row.latest}<span class="caption">Última: {row.latest}</span>{/if}
+            {#if row.latest}<span class="caption">{t("Última: {v}", { v: row.latest })}</span>{/if}
           </div>
 
           <div class="installed">
@@ -244,24 +243,24 @@
                 <ProgressBar value={stageFraction(p)} />
               </div>
               {#if p.stage === "downloading" || p.stage === "preparing"}
-                <button class="btn subtle icon" title="Cancelar" onclick={() => php.cancel(row.minor)}>
+                <button class="btn subtle icon" title={t("Cancelar")} onclick={() => php.cancel(row.minor)}>
                   <Glyph name="close" size={12} />
                 </button>
               {/if}
             {:else if row.installed}
               {#if row.update_available}
-                <button class="btn accent" onclick={() => install(row.minor)}>Atualizar</button>
+                <button class="btn accent" onclick={() => install(row.minor)}>{t("Atualizar")}</button>
               {/if}
-              <button class="btn" onclick={() => openDetail(row.installed!)}>Extensões</button>
-              <button class="btn subtle icon" title="Abrir pasta" onclick={() => php.openFolder(row.installed!)}>
+              <button class="btn" onclick={() => openDetail(row.installed!)}>{t("Extensões")}</button>
+              <button class="btn subtle icon" title={t("Abrir pasta")} onclick={() => php.openFolder(row.installed!)}>
                 <Glyph name="folderOpen" />
               </button>
-              <button class="btn subtle icon" title="Remover" onclick={() => remove(row.minor, row.installed!)}>
+              <button class="btn subtle icon" title={t("Remover")} onclick={() => remove(row.minor, row.installed!)}>
                 <Glyph name="delete" />
               </button>
             {:else if row.latest}
-              <button class="btn" title={row.size ? `Download de ${row.size}` : undefined} onclick={() => install(row.minor)}>
-                Instalar
+              <button class="btn" title={row.size ? t("Download de {size}", { size: row.size }) : undefined} onclick={() => install(row.minor)}>
+                {t("Instalar")}
               </button>
             {/if}
           </div>
@@ -271,9 +270,9 @@
               <Glyph name="info" size={14} />
               <span>{err.error}</span>
               {#if err.code === "vc_redist"}
-                <button class="btn" onclick={() => php.openVcRedist()}>Baixar Visual C++</button>
+                <button class="btn" onclick={() => php.openVcRedist()}>{t("Baixar Visual C++")}</button>
               {/if}
-              <button class="btn subtle" onclick={() => install(row.minor)}>Tentar de novo</button>
+              <button class="btn subtle" onclick={() => install(row.minor)}>{t("Tentar de novo")}</button>
             </div>
           {/if}
         </div>
@@ -284,9 +283,9 @@
       <SettingRow
         icon="package"
         title="Composer"
-        description="Baixado junto com a primeira versão do PHP. No terminal ele chega na fase 4."
+        description={t("Baixado junto com a primeira versão do PHP. Também funciona no terminal.")}
       >
-        <span class="caption">{overview.composer ? "Instalado" : "Não instalado"}</span>
+        <span class="caption">{overview.composer ? t("Instalado") : t("Não instalado")}</span>
       </SettingRow>
     </div>
   {:else if loading}

@@ -2,6 +2,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { inTauri, mockEmit } from "./api";
+import { locale, t } from "./i18n.svelte";
 
 export interface PhpRow {
   minor: string;
@@ -53,13 +54,13 @@ export interface PhpDone {
 export function stageLabel(p: PhpStage): string {
   switch (p.stage) {
     case "preparing":
-      return "Preparando…";
+      return t("Preparando…");
     case "downloading": {
-      const mb = (n: number) => (n / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 1 });
-      return p.total ? `Baixando ${mb(p.received)} de ${mb(p.total)} MB` : `Baixando ${mb(p.received)} MB`;
+      const mb = (n: number) => (n / 1024 / 1024).toLocaleString(locale(), { maximumFractionDigits: 1 });
+      return p.total ? t("Baixando {a} de {b} MB", { a: mb(p.received), b: mb(p.total) }) : t("Baixando {a} MB", { a: mb(p.received) });
     }
     case "extracting":
-      return "Extraindo…";
+      return t("Extraindo…");
     case "configuring":
       return "Configurando php.ini…";
     case "verifying":
@@ -75,7 +76,7 @@ export function stageFraction(p: PhpStage): number | null {
 
 export async function confirm(message: string, title: string, okLabel: string): Promise<boolean> {
   if (!inTauri) return window.confirm(message);
-  return ask(message, { title, kind: "warning", okLabel, cancelLabel: "Cancelar" });
+  return ask(message, { title, kind: "warning", okLabel, cancelLabel: t("Cancelar") });
 }
 
 // ---------- Dados de exemplo (navegador) ----------

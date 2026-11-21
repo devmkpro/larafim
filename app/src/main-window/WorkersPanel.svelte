@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import { onEvent } from "../lib/api";
   import Glyph from "../lib/Glyph.svelte";
   import type { DevLog, DevStatus } from "../lib/node";
@@ -9,11 +10,11 @@
   // Workers do Laravel: ligam junto com o projeto e reiniciam se caírem.
   let { project }: { project: Project } = $props();
 
-  const labels: Record<Worker, { title: string; hint: string }> = {
-    queue: { title: "Fila", hint: "queue:work" },
-    schedule: { title: "Agendador", hint: "schedule:work" },
+  const labels = $derived<Record<Worker, { title: string; hint: string }>>({
+    queue: { title: t("Fila"), hint: "queue:work" },
+    schedule: { title: t("Agendador"), hint: "schedule:work" },
     reverb: { title: "Reverb", hint: "reverb:start (WebSockets)" },
-  };
+  });
 
   let reverb = $state(false);
   let status = $state<Record<string, DevStatus | null>>({});
@@ -57,15 +58,15 @@
 
   const stateText = (w: Worker) => {
     const s = status[w];
-    if (!project.workers.includes(w)) return "desligado";
-    if (!project.online) return "liga com o projeto";
-    if (!s) return "parado";
-    if (s.state === "exited") return s.exit_code === null ? "parado" : `parou (código ${s.exit_code})`;
-    return "rodando";
+    if (!project.workers.includes(w)) return t("desligado");
+    if (!project.online) return t("liga com o projeto");
+    if (!s) return t("parado");
+    if (s.state === "exited") return s.exit_code === null ? t("parado") : t("parou (código {code})", { code: s.exit_code });
+    return t("rodando");
   };
 </script>
 
-<div class="section-title">Workers</div>
+<div class="section-title">{t("Workers")}</div>
 {#each workers as w (w)}
   {@const running = status[w]?.state === "running" || status[w]?.state === "starting"}
   <div class="worker">
@@ -76,13 +77,13 @@
     </div>
     <button
       class="btn subtle icon"
-      title="Ver saída"
+      title={t("Ver saída")}
       disabled={!(logs[w]?.length)}
       onclick={() => (open = open === w ? null : w)}
     >
       <Glyph name={open === w ? "chevronDown" : "terminal"} />
     </button>
-    <Toggle label={`Worker ${labels[w].title}`} checked={project.workers.includes(w)} onchange={(v) => toggle(w, v)} />
+    <Toggle label={t("Worker {name}", { name: labels[w].title })} checked={project.workers.includes(w)} onchange={(v) => toggle(w, v)} />
   </div>
   {#if open === w}
     <pre>{(logs[w] ?? []).join("\n")}</pre>

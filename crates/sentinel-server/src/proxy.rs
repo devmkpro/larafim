@@ -19,7 +19,7 @@ async fn connect(port: u16) -> std::io::Result<TcpStream> {
     }
 }
 
-pub async fn forward(mut req: Request<Incoming>, port: u16, original_host: &str) -> Response<Body> {
+pub async fn forward(mut req: Request<Incoming>, port: u16, original_host: &str, https: bool) -> Response<Body> {
     let client_upgrade = req.headers().contains_key(UPGRADE).then(|| hyper::upgrade::on(&mut req));
 
     let stream = match connect(port).await {
@@ -40,7 +40,7 @@ pub async fn forward(mut req: Request<Incoming>, port: u16, original_host: &str)
     if let Ok(v) = HeaderValue::from_str(original_host) {
         headers.insert("x-forwarded-host", v);
     }
-    headers.insert("x-forwarded-proto", HeaderValue::from_static("http"));
+    headers.insert("x-forwarded-proto", HeaderValue::from_static(if https { "https" } else { "http" }));
     if let Ok(v) = HeaderValue::from_str(&format!("localhost:{port}")) {
         headers.insert(HOST, v);
     }

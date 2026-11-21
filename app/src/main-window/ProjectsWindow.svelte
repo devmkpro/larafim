@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import { api, kindLabel, onEvent, projectUrl } from "../lib/api";
   import { pickFolder } from "../lib/folders";
   import Glyph from "../lib/Glyph.svelte";
@@ -40,7 +41,8 @@
     return list;
   });
 
-  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+  /** Plural simples: chaves "{n} item" / "{n} itens" (cada idioma traduz as duas). */
+  const plural = (n: number, one: string, many: string) => t(n === 1 ? one : many, { n });
   const newCount = $derived(projects.filter((p) => p.status === "new").length);
   const selected = $derived(projects.find((p) => p.path === selectedPath) ?? null);
 
@@ -78,13 +80,13 @@
   }
 
   async function addRoot() {
-    const dir = await pickFolder("Escolha a pasta onde ficam seus projetos");
+    const dir = await pickFolder(t("Escolha a pasta onde ficam seus projetos"));
     if (!dir || !app.config || app.config.roots.includes(dir)) return;
     await app.update({ roots: [...app.config.roots, dir] });
   }
 
   async function addProject() {
-    const dir = await pickFolder("Escolha a pasta do projeto");
+    const dir = await pickFolder(t("Escolha a pasta do projeto"));
     if (!dir) return;
     await review(dir);
   }
@@ -95,7 +97,7 @@
       const p = await projectsApi.inspectFolder(dir);
       if (p.already_imported) {
         selectedPath = projects.find((x) => x.path.toLowerCase() === dir.toLowerCase())?.path ?? selectedPath;
-        app.error = "Este projeto já está no Sentinel.";
+        app.error = t("Este projeto já está no Sentinel.");
         return;
       }
       proposal = p;
@@ -153,24 +155,24 @@
   <div class="toolbar">
     <button class="btn subtle" onclick={addProject}>
       <Glyph name="add" />
-      Adicionar projeto
+      {t("Adicionar projeto")}
     </button>
     <button class="btn subtle" onclick={addRoot}>
       <Glyph name="folder" />
-      Adicionar pasta
+      {t("Adicionar pasta")}
     </button>
     <button class="btn subtle" onclick={() => (creating = true)}>
       <Glyph name="package" />
-      Novo Laravel
+      {t("Novo Laravel")}
     </button>
 
     <div class="grow" data-tauri-drag-region></div>
 
     <label class="search">
       <Glyph name="search" size={14} />
-      <input class="input" placeholder="Buscar projetos" bind:value={query} bind:this={searchInput} />
+      <input class="input" placeholder={t("Buscar projetos")} bind:value={query} bind:this={searchInput} />
     </label>
-    <button class="btn subtle icon" title="Atualizar lista (F5)" onclick={scan} disabled={scanning}>
+    <button class="btn subtle icon" title={t("Atualizar lista (F5)")} onclick={scan} disabled={scanning}>
       <span class:spin={scanning}><Glyph name="refresh" /></span>
     </button>
 
@@ -179,17 +181,19 @@
     <button
       class="btn subtle icon badge-host"
       title={phpUpdates
-        ? `Versões do PHP — ${phpUpdates} ${phpUpdates === 1 ? "atualização disponível" : "atualizações disponíveis"}`
-        : "Versões do PHP"}
+        ? phpUpdates === 1
+          ? t("Versões do PHP — 1 atualização disponível")
+          : t("Versões do PHP — {n} atualizações disponíveis", { n: phpUpdates })
+        : t("Versões do PHP")}
       onclick={() => api.openSettings("php")}
     >
       <Glyph name="code" />
       {#if phpUpdates}<span class="badge-dot"></span>{/if}
     </button>
-    <button class="btn subtle icon" title="Serviços" onclick={() => api.openSettings("services")}>
+    <button class="btn subtle icon" title={t("Serviços")} onclick={() => api.openSettings("services")}>
       <Glyph name="database" />
     </button>
-    <button class="btn subtle icon" title="Configurações" onclick={() => api.openSettings("general")}>
+    <button class="btn subtle icon" title={t("Configurações")} onclick={() => api.openSettings("general")}>
       <Glyph name="settings" />
     </button>
   </div>
@@ -198,25 +202,24 @@
     <div class="error" role="alert">
       <Glyph name="info" />
       <span>{app.error.charAt(0).toUpperCase() + app.error.slice(1)}</span>
-      <button class="btn subtle" onclick={() => (app.error = null)}>Fechar</button>
+      <button class="btn subtle" onclick={() => (app.error = null)}>{t("Fechar")}</button>
     </div>
   {/if}
 
   <div class="body">
-    <section class="list" aria-label="Projetos">
+    <section class="list" aria-label={t("Projetos")}>
       {#if !app.config}
-        <div class="empty caption">Carregando…</div>
+        <div class="empty caption">{t("Carregando…")}</div>
       {:else if app.config.roots.length === 0 && projects.length === 0}
         <div class="empty">
           <Glyph name="folderOpen" size={40} />
-          <h2>Adicione sua pasta de projetos</h2>
+          <h2>{t("Adicione sua pasta de projetos")}</h2>
           <p class="caption">
-            Escolha onde ficam seus projetos, por exemplo <span class="mono">D:\www</span>. O Sentinel lista o que
-            encontrar e não liga nada sozinho. Também dá para adicionar um projeto avulso, de qualquer pasta.
+            {t("Escolha onde ficam seus projetos, por exemplo")} <span class="mono">D:\www</span>{t(". O Sentinel lista o que encontrar e não liga nada sozinho. Também dá para adicionar um projeto avulso, de qualquer pasta.")}
           </p>
           <div class="empty-actions">
-            <button class="btn accent" onclick={addRoot}>Escolher pasta de projetos</button>
-            <button class="btn" onclick={addProject}>Adicionar projeto avulso</button>
+            <button class="btn accent" onclick={addRoot}>{t("Escolher pasta de projetos")}</button>
+            <button class="btn" onclick={addProject}>{t("Adicionar projeto avulso")}</button>
           </div>
         </div>
       {:else}
@@ -224,26 +227,27 @@
           <div class="newbar">
             <Glyph name="info" />
             <span>
-              {newCount === 1 ? "1 projeto novo encontrado" : `${newCount} projetos novos encontrados`}. Importe para
-              configurar e deixar online.
+              {newCount === 1
+                ? t("1 projeto novo encontrado. Importe para configurar e deixar online.")
+                : t("{n} projetos novos encontrados. Importe para configurar e deixar online.", { n: newCount })}
             </span>
-            <button class="btn" onclick={() => run(projectsApi.importAll())}>Importar todos</button>
+            <button class="btn" onclick={() => run(projectsApi.importAll())}>{t("Importar todos")}</button>
           </div>
         {/if}
 
         <div class="columns section-title">
           <span></span>
-          <span>Nome</span>
-          <span>Tipo</span>
+          <span>{t("Nome")}</span>
+          <span>{t("Tipo")}</span>
           <span>PHP</span>
-          <span>Endereço</span>
+          <span>{t("Endereço")}</span>
         </div>
 
         <div
           class="rows"
           role="listbox"
           tabindex="0"
-          aria-label="Lista de projetos"
+          aria-label={t("Lista de projetos")}
           onkeydown={(e) => {
             if (e.key === "ArrowDown") (e.preventDefault(), moveSelection(1));
             if (e.key === "ArrowUp") (e.preventDefault(), moveSelection(-1));
@@ -270,18 +274,18 @@
                 <span class="dot" class:on={p.online} title={p.online ? "Online" : "Offline"}></span>
                 <span class="name">
                   <span class="label">{p.name}</span>
-                  {#if p.status === "new"}<span class="tag new">Novo</span>{/if}
-                  {#if p.status === "missing"}<span class="tag missing">Pasta não encontrada</span>{/if}
+                  {#if p.status === "new"}<span class="tag new">{t("Novo")}</span>{/if}
+                  {#if p.status === "missing"}<span class="tag missing">{t("Pasta não encontrada")}</span>{/if}
                 </span>
                 <span class="cell">{kindLabel[p.kind]}{p.kind !== "node" && p.has_node ? " + Node" : ""}</span>
-                <span class="cell" title={p.php_pin ? "Versão fixada" : "Pedida pelo projeto"}>
+                <span class="cell" title={p.php_pin ? t("Versão fixada") : t("Pedida pelo projeto")}>
                   {p.kind === "node" ? "—" : (p.php_pin ?? p.php_request ?? "auto")}
                 </span>
                 <span class="cell url">{projectUrl(app.config, p.domain)}</span>
               </div>
             {:else}
               <div class="group-empty caption">
-                {query ? "Nada encontrado nesta pasta." : "Nenhum projeto encontrado nesta pasta."}
+                {query ? t("Nada encontrado nesta pasta.") : t("Nenhum projeto encontrado nesta pasta.")}
               </div>
             {/each}
           {/each}
@@ -300,34 +304,34 @@
   <footer class="statusbar caption">
     <span class="dot" class:on={status?.running}></span>
     {#if status?.running}
-      <span>Servidor ligado · porta {status.port}</span>
+      <span>{t("Servidor ligado · porta {port}", { port: status.port })}</span>
       <span class="sep"></span>
-      <span>{plural(status.online.length, "online", "online")}</span>
+      <span>{plural(status.online.length, "{n} online", "{n} online")}</span>
       {#if status.node_running}
         <span class="sep"></span>
-        <span>Node ativo: {status.node_running}</span>
+        <span>{t("Node ativo: {n}", { n: status.node_running })}</span>
       {/if}
       {#if status.php_running.length}
         <span class="sep"></span>
-        <span title="Versões do PHP com processos rodando agora">PHP ativo: {status.php_running.join(", ")}</span>
+        <span title={t("Versões do PHP com processos rodando agora")}>{t("PHP ativo: {list}", { list: status.php_running.join(", ") })}</span>
       {/if}
-      <button class="link" onclick={() => server.stopAll()}>Desligar todos</button>
+      <button class="link" onclick={() => server.stopAll()}>{t("Desligar todos")}</button>
     {:else}
-      <span>Servidor desligado</span>
+      <span>{t("Servidor desligado")}</span>
     {/if}
     {#if status?.hosts_outdated}
       <span class="sep"></span>
-      <button class="link warn" onclick={() => fixHosts()} title="Atualiza o arquivo hosts do Windows (pede permissão)">
-        Endereços .{app.config?.tld} desatualizados — corrigir
+      <button class="link warn" onclick={() => fixHosts()} title={t("Atualiza o arquivo hosts do Windows (pede permissão)")}>
+        {t("Endereços .{tld} desatualizados — corrigir", { tld: app.config?.tld ?? "" })}
       </button>
     {/if}
     <span class="sep"></span>
-    <span>{plural(projects.filter((p) => p.status === "imported").length, "importado", "importados")}</span>
-    {#if newCount}<span class="sep"></span><span>{plural(newCount, "novo", "novos")}</span>{/if}
+    <span>{plural(projects.filter((p) => p.status === "imported").length, "{n} importado", "{n} importados")}</span>
+    {#if newCount}<span class="sep"></span><span>{plural(newCount, "{n} novo", "{n} novos")}</span>{/if}
     <span class="sep"></span>
-    <span>Domínio .{app.config?.tld}</span>
+    <span>{t("Domínio .{tld}", { tld: app.config?.tld ?? "" })}</span>
     <span class="grow"></span>
-    {#if app.saving}<span>Salvando…</span>{/if}
+    {#if app.saving}<span>{t("Salvando…")}</span>{/if}
     <span>Sentinel {app.info?.version}</span>
   </footer>
 </div>

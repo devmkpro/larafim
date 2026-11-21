@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import { onEvent } from "../lib/api";
   import Glyph from "../lib/Glyph.svelte";
   import { devKey, nodeApi, type DevLog, type DevStatus } from "../lib/node";
@@ -49,10 +50,10 @@
   }
 
   const label = $derived.by(() => {
-    if (!status) return online ? "Não iniciado" : "Desligado (liga junto com o projeto)";
-    if (status.state === "starting") return "Iniciando…";
-    if (status.state === "running") return `Rodando em localhost:${status.port}`;
-    return status.exit_code === null ? "Parado" : `Parou (código ${status.exit_code})`;
+    if (!status) return online ? t("Não iniciado") : t("Desligado (liga junto com o projeto)");
+    if (status.state === "starting") return t("Iniciando…");
+    if (status.state === "running") return t("Rodando em localhost:{port}", { port: status.port ?? "" });
+    return status.exit_code === null ? t("Parado") : t("Parou (código {code})", { code: status.exit_code });
   });
 </script>
 
@@ -60,15 +61,15 @@
   <div class="head">
     <span class="dot" class:on={status?.state === "running"} class:busy={status?.state === "starting"} class:bad={status?.state === "exited" && online}></span>
     <div class="text">
-      <strong>Node</strong>
+      <strong>{t("Node")}</strong>
       <span class="caption" title={status?.command}>{label}</span>
     </div>
     {#if online}
-      <button class="btn subtle icon" title="Reiniciar o servidor do Node" onclick={restart}><Glyph name="refresh" /></button>
+      <button class="btn subtle icon" title={t("Reiniciar o servidor do Node")} onclick={restart}><Glyph name="refresh" /></button>
     {/if}
     <button
       class="btn subtle icon"
-      title={open ? "Ocultar saída" : "Ver saída do comando"}
+      title={open ? t("Ocultar saída") : t("Ver saída do comando")}
       onclick={() => (open = !open)}
       disabled={!logs.length}
     >

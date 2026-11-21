@@ -176,9 +176,9 @@ impl ProjectsFile {
     /// Importa uma pasta com a configuração sugerida. Devolve o domínio dado.
     pub fn import(&mut self, path: &Path) -> Result<String> {
         if self.find(path).is_some() {
-            return Err(Error::Invalid("este projeto já foi importado".into()));
+            return Err(Error::Invalid(crate::t!("este projeto já foi importado")));
         }
-        let d = detect_any(path).ok_or_else(|| Error::Invalid(format!("a pasta {} não existe", path.display())))?;
+        let d = detect_any(path).ok_or_else(|| Error::Invalid(crate::t!("a pasta {a} não existe", a = path.display())))?;
         let used: Vec<String> = self.projects.iter().map(|p| p.domain.clone()).collect();
         let cfg = default_config(&d, unique_domain(&d.domain, &used));
         let domain = cfg.domain.clone();
@@ -197,28 +197,28 @@ impl ProjectsFile {
             .iter()
             .any(|p| !same_path(&p.path, &cfg.path) && p.domain == cfg.domain)
         {
-            return Err(Error::Invalid(format!("o domínio \"{}\" já é usado por outro projeto", cfg.domain)));
+            return Err(Error::Invalid(crate::t!("o domínio \"{a}\" já é usado por outro projeto", a = cfg.domain)));
         }
         if !cfg.path.is_dir() {
-            return Err(Error::Invalid(format!("a pasta {} não existe", cfg.path.display())));
+            return Err(Error::Invalid(crate::t!("a pasta {a} não existe", a = cfg.path.display())));
         }
         cfg.docroot = cfg.docroot.trim().trim_matches(['\\', '/']).to_string();
         if cfg.docroot.split(['\\', '/']).any(|part| part == ".." || part.contains(':'))
             || !cfg.path.join(&cfg.docroot).is_dir()
         {
-            return Err(Error::Invalid(format!("a pasta pública \"{}\" não existe dentro do projeto", cfg.docroot)));
+            return Err(Error::Invalid(crate::t!("a pasta pública \"{a}\" não existe dentro do projeto", a = cfg.docroot)));
         }
         if let Some(php) = &cfg.php {
             let ok = php.split('.').count() == 2 && php.split('.').all(|p| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit()));
             if !ok {
-                return Err(Error::Invalid(format!("versão do PHP inválida: {php}")));
+                return Err(Error::Invalid(crate::t!("versão do PHP inválida: {php}", php = php)));
             }
         }
         cfg.node_command = cfg.node_command.map(|c| c.trim().to_string()).filter(|c| !c.is_empty());
         if let Some(major) = &cfg.node_version
             && (major.is_empty() || !major.chars().all(|c| c.is_ascii_digit()))
         {
-            return Err(Error::Invalid(format!("versão do Node inválida: {major}")));
+            return Err(Error::Invalid(crate::t!("versão do Node inválida: {major}", major = major)));
         }
         if let Some(db) = &cfg.database
             && db != "mariadb"
@@ -227,22 +227,22 @@ impl ProjectsFile {
             && db != "sqlite"
             && !db.strip_prefix("external:").is_some_and(|id| !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'))
         {
-            return Err(Error::Invalid(format!("banco desconhecido: {db}")));
+            return Err(Error::Invalid(crate::t!("banco desconhecido: {db}", db = db)));
         }
         if cfg.database.as_deref() == Some("mariadb-own") && (cfg.db_version.is_none() || cfg.db_port.is_none()) {
-            return Err(Error::Invalid("o MariaDB próprio precisa de versão e porta".into()));
+            return Err(Error::Invalid(crate::t!("o MariaDB próprio precisa de versão e porta")));
         }
         if cfg.mail.as_deref().is_some_and(|m| m != "mailpit") {
-            return Err(Error::Invalid("serviço de e-mail desconhecido".into()));
+            return Err(Error::Invalid(crate::t!("serviço de e-mail desconhecido")));
         }
         if cfg.storage.as_deref().is_some_and(|m| m != "s3") {
-            return Err(Error::Invalid("storage desconhecido".into()));
+            return Err(Error::Invalid(crate::t!("storage desconhecido")));
         }
         if cfg.workers.iter().any(|w| !["queue", "schedule", "reverb"].contains(&w.as_str())) {
-            return Err(Error::Invalid("worker desconhecido".into()));
+            return Err(Error::Invalid(crate::t!("worker desconhecido")));
         }
         if cfg.node && cfg.node_command.is_none() {
-            return Err(Error::Invalid("informe o comando do Node (ex.: npm run dev)".into()));
+            return Err(Error::Invalid(crate::t!("informe o comando do Node (ex.: npm run dev)")));
         }
 
         self.ignored.retain(|i| !same_path(i, &cfg.path));

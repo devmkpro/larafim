@@ -9,6 +9,9 @@ export interface AppConfig {
   theme: Theme;
   tld: string;
   http_port: number;
+  language: string | null;
+  https: boolean;
+  https_port: number;
   roots: string[];
   start_with_windows: boolean;
   keep_in_tray: boolean;
@@ -41,6 +44,9 @@ export let mockConfig: AppConfig = {
   theme: "system",
   tld: "offline",
   http_port: 80,
+  language: "pt-BR",
+  https: false,
+  https_port: 443,
   roots: ["D:\\www"],
   start_with_windows: false,
   keep_in_tray: true,
@@ -94,6 +100,10 @@ export function onEvent<T>(name: string, handler: (payload: T) => void): () => v
 
 /** URL completa de um projeto (igual à regra do Rust). */
 export function projectUrl(cfg: AppConfig, domain: string): string {
+  if (cfg.https) {
+    const base = `https://${domain}.${cfg.tld}`;
+    return cfg.https_port === 443 ? base : `${base}:${cfg.https_port}`;
+  }
   const base = `http://${domain}.${cfg.tld}`;
   return cfg.http_port === 80 ? base : `${base}:${cfg.http_port}`;
 }

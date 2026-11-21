@@ -2,6 +2,7 @@
 //! ou já existentes no PC): SQL, criar banco, listar, backup e restauração.
 //! A senha vai pela variável `MYSQL_PWD`, nunca na linha de comando.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
@@ -67,7 +68,7 @@ impl DbClient {
             .join(" ")
             .trim()
             .to_string();
-        if text.is_empty() { format!("código {:?}", out.status.code()) } else { text }
+        if text.is_empty() { t!("código {a}", a = format!("{:?}", out.status.code())) } else { text }
     }
 
     /// Roda SQL e devolve a saída (sem cabeçalhos).
@@ -77,7 +78,7 @@ impl DbClient {
             .args(["-N", "-B", "-e", statement])
             .output()
             .await
-            .map_err(|e| format!("não foi possível rodar o cliente do banco: {e}"))?;
+            .map_err(|e| t!("não foi possível rodar o cliente do banco: {e}", e = e))?;
         if !out.status.success() {
             return Err(Self::fail(&out));
         }
@@ -91,7 +92,7 @@ impl DbClient {
 
     pub async fn create_database(&self, name: &str) -> Result<(), String> {
         if !valid_db(name) {
-            return Err(format!("nome de banco inválido: {name}"));
+            return Err(t!("nome de banco inválido: {name}", name = name));
         }
         self.sql(&format!("CREATE DATABASE IF NOT EXISTS `{name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"))
             .await
@@ -112,7 +113,7 @@ impl DbClient {
     /// Exporta um banco para `.sql`.
     pub async fn dump(&self, db: &str, file: &Path) -> Result<(), String> {
         if !valid_db(db) {
-            return Err(format!("nome de banco inválido: {db}"));
+            return Err(t!("nome de banco inválido: {db}", db = db));
         }
         if let Some(p) = file.parent() {
             std::fs::create_dir_all(p).map_err(|e| e.to_string())?;

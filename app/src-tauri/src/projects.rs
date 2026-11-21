@@ -1,6 +1,7 @@
 //! Comandos de projetos: listar, importar, editar, remover e ignorar.
 //! Tudo fica em `projects.toml`; nada é escrito nas pastas dos projetos.
 
+use sentinel_core::t;
 use std::path::PathBuf;
 
 use sentinel_core::projects::{detect_any, docroot_options};
@@ -147,7 +148,7 @@ pub struct FolderProposal {
 
 #[tauri::command]
 pub fn inspect_folder(state: State<'_, AppState>, path: PathBuf) -> CmdResult<FolderProposal> {
-    let d = detect_any(&path).ok_or_else(|| format!("a pasta {} não existe", path.display()))?;
+    let d = detect_any(&path).ok_or_else(|| t!("a pasta {a} não existe", a = path.display()))?;
     let parent = path.parent().map(PathBuf::from).unwrap_or_default();
     let recognized = sentinel_core::projects::detect(&path, &parent).is_some();
     let store = state.projects.lock().map_err(|e| e.to_string())?;

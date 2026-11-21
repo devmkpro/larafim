@@ -3,6 +3,7 @@
 //! Os pools sobem na primeira requisição e são desligados quando ficam
 //! parados por um tempo — o PC só paga pelo PHP que está sendo usado.
 
+use sentinel_core::t;
 use std::collections::{HashMap, VecDeque};
 use std::net::{Ipv4Addr, SocketAddr};
 use std::path::PathBuf;
@@ -73,9 +74,9 @@ struct Pool {
 
 #[derive(Debug, thiserror::Error)]
 pub enum PoolError {
-    #[error("não foi possível iniciar o php-cgi do PHP {version}: {reason}")]
+    #[error("{}", sentinel_core::i18n::tf("não foi possível iniciar o php-cgi do PHP {version}: {reason}", &[("version", &.version as &dyn std::fmt::Display), ("reason", &.reason as &dyn std::fmt::Display)]))]
     Spawn { version: String, reason: String },
-    #[error("o PHP não respondeu: {0}")]
+    #[error("{}", sentinel_core::i18n::tf("o PHP não respondeu: {0}", &[("0", &.0 as &dyn std::fmt::Display)]))]
     Request(String),
 }
 
@@ -180,7 +181,7 @@ impl Pool {
                     }
                 }
             }
-            Err(PoolError::Request("sem resposta".into()))
+            Err(PoolError::Request(t!("sem resposta")))
         }
         .await;
 
@@ -219,12 +220,12 @@ impl Pool {
                 return Ok(());
             }
             if !worker.alive() {
-                return Err(fail("o processo terminou ao iniciar (php.ini ou extensão com problema?)".into()));
+                return Err(fail(t!("o processo terminou ao iniciar (php.ini ou extensão com problema?)")));
             }
             tokio::time::sleep(Duration::from_millis(25)).await;
         }
         worker.stop().await;
-        Err(fail("não respondeu em 10 segundos".into()))
+        Err(fail(t!("não respondeu em 10 segundos")))
     }
 
     async fn stop(&self) {

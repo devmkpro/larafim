@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import { pickFolder } from "../lib/folders";
   import Glyph from "../lib/Glyph.svelte";
   import { php } from "../lib/php";
@@ -34,16 +35,15 @@
   }
 
   async function testFolder() {
-    const path = await pickFolder("Escolha uma pasta para testar");
+    const path = await pickFolder(t("Escolha uma pasta para testar"));
     if (!path) return;
     tested = { path, result: await terminal.forFolder(path) };
   }
 </script>
 
-<h1>Terminal</h1>
+<h1>{t("Terminal")}</h1>
 <p class="lead caption">
-  Os comandos <span class="mono">php</span> e <span class="mono">composer</span> do Sentinel escolhem sozinhos a versão
-  do PHP de cada pasta: dentro do projeto da loja, PHP 8.4; dentro do blog, PHP 8.1.
+  {t("Os comandos")} <span class="mono">php</span> e <span class="mono">composer</span> {t("do Sentinel escolhem sozinhos a versão do PHP de cada pasta: dentro do projeto da loja, PHP 8.4; dentro do blog, PHP 8.1.")}
 </p>
 
 {#if error}
@@ -51,21 +51,21 @@
 {/if}
 
 {#if status}
-  <SettingRow icon="terminal" title="Comandos php e composer" description={status.bin_dir}>
-    <span class="caption">{status.installed ? "Instalados" : "Não instalados"}</span>
+  <SettingRow icon="terminal" title={t("Comandos php e composer")} description={status.bin_dir}>
+    <span class="caption">{status.installed ? t("Instalados") : t("Não instalados")}</span>
     <button class="btn" disabled={busy || !status.source_found} onclick={() => run(terminal.install())}>
-      {status.installed ? "Reparar" : "Instalar"}
+      {status.installed ? t("Reparar") : t("Instalar")}
     </button>
   </SettingRow>
 
   <SettingRow
     icon="globe"
-    title="Usar em qualquer terminal"
-    description="Coloca a pasta dos comandos no começo do PATH do seu usuário (sem precisar de administrador). Vale para terminais abertos depois."
+    title={t("Usar em qualquer terminal")}
+    description={t("Coloca a pasta dos comandos no começo do PATH do seu usuário (sem precisar de administrador). Vale para terminais abertos depois.")}
   >
     <span class="caption">{status.in_path ? "Ativado" : "Desativado"}</span>
     <Toggle
-      label="Usar em qualquer terminal"
+      label={t("Usar em qualquer terminal")}
       checked={status.in_path}
       disabled={busy || (!status.source_found && !status.installed)}
       onchange={(v) => run(terminal.setInPath(v))}
@@ -76,10 +76,9 @@
     <div class="infobar warn">
       <Glyph name="info" />
       <div>
-        <strong>Outro php.exe vem antes do Sentinel.</strong>
+        <strong>{t("Outro php.exe vem antes do Sentinel.")}</strong>
         <p class="caption">
-          O Windows procura primeiro no PATH do sistema, então estes serão usados no lugar do Sentinel. Tire-os do PATH do
-          sistema (Laragon, XAMPP…) ou use o botão "Abrir terminal" do projeto, que já abre com o Sentinel na frente.
+          {t("O Windows procura primeiro no PATH do sistema, então estes serão usados no lugar do Sentinel. Tire-os do PATH do sistema (Laragon, XAMPP…) ou use o botão \"Abrir terminal\" do projeto, que já abre com o Sentinel na frente.")}
         </p>
         <ul class="mono">
           {#each status.conflicts as c (c)}<li>{c}</li>{/each}
@@ -88,20 +87,20 @@
     </div>
   {/if}
 
-  <SettingRow icon="code" title="Versão fora de projetos" description="Usada em pastas que não pedem uma versão">
+  <SettingRow icon="code" title={t("Versão fora de projetos")} description={t("Usada em pastas que não pedem uma versão")}>
     <div class="select">
       <select
         value={app.config?.default_php ?? ""}
         onchange={(e) => app.update({ default_php: e.currentTarget.value || null })}
       >
-        <option value="">Mais nova instalada</option>
+        <option value="">{t("Mais nova instalada")}</option>
         {#each minors as m (m)}<option value={m}>PHP {m}</option>{/each}
       </select>
     </div>
   </SettingRow>
 
-  <SettingRow icon="search" title="Testar uma pasta" description="Mostra qual PHP o terminal usaria nela e por quê">
-    <button class="btn" onclick={testFolder}>Escolher pasta…</button>
+  <SettingRow icon="search" title={t("Testar uma pasta")} description={t("Mostra qual PHP o terminal usaria nela e por quê")}>
+    <button class="btn" onclick={testFolder}>{t("Escolher pasta…")}</button>
   </SettingRow>
 
   {#if tested}
@@ -110,20 +109,20 @@
       {#if tested.result.php}
         <div class="big"><Glyph name="check" /> PHP {tested.result.php.version}</div>
       {:else}
-        <div class="big none"><Glyph name="info" /> Nenhum PHP serve</div>
+        <div class="big none"><Glyph name="info" /> {t("Nenhum PHP serve")}</div>
       {/if}
       <div class="caption">
-        {tested.result.reason}{tested.result.project ? ` · projeto ${tested.result.project}` : ""}
+        {tested.result.reason}{tested.result.project ? " · " + t("projeto {name}", { name: tested.result.project }) : ""}
       </div>
     </div>
   {/if}
 
   <p class="tip caption">
-    Dica: para forçar uma versão só no terminal atual, use
-    <span class="mono">$env:SENTINEL_PHP = "8.3"</span> (PowerShell) ou <span class="mono">set SENTINEL_PHP=8.3</span> (cmd).
+    {t("Dica: para forçar uma versão só no terminal atual, use")}
+    <span class="mono">$env:SENTINEL_PHP = "8.3"</span> {t("(PowerShell) ou")} <span class="mono">set SENTINEL_PHP=8.3</span> {t("(cmd).")}
   </p>
 {:else}
-  <p class="caption">Carregando…</p>
+  <p class="caption">{t("Carregando…")}</p>
 {/if}
 
 <style>

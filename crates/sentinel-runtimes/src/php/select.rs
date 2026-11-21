@@ -6,6 +6,7 @@
 //! 3. Pasta fora do Sentinel: `.php-version` ou `composer.json` mais próximo.
 //! 4. Versão padrão das configurações, ou a mais nova instalada.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 
 use sentinel_core::store::same_path;
@@ -56,7 +57,7 @@ pub fn select(paths: &Paths, dir: &Path) -> Selection {
     };
 
     if installed.is_empty() {
-        return pick(None, "nenhum PHP instalado no Sentinel".into(), None, None);
+        return pick(None, t!("nenhum PHP instalado no Sentinel"), None, None);
     }
 
     // 1. Escolha manual da sessão.
@@ -66,7 +67,7 @@ pub fn select(paths: &Paths, dir: &Path) -> Selection {
         let forced = forced.trim().to_string();
         return match newest_of_minor(&installed, &forced) {
             Some(p) => pick(Some(p), format!("SENTINEL_PHP={forced}"), None, None),
-            None => pick(None, format!("SENTINEL_PHP={forced}, mas essa versão não está instalada"), None, None),
+            None => pick(None, t!("SENTINEL_PHP={forced}, mas essa versão não está instalada", forced = forced), None, None),
         };
     }
 
@@ -78,16 +79,16 @@ pub fn select(paths: &Paths, dir: &Path) -> Selection {
         let request = request_in(&cfg.path);
         if let Some(minor) = &cfg.php {
             return match newest_of_minor(&installed, minor) {
-                Some(p) => pick(Some(p), format!("versão fixada no projeto ({minor})"), Some(name), request),
-                None => pick(None, format!("o projeto fixa o PHP {minor}, que não está instalado"), Some(name), request),
+                Some(p) => pick(Some(p), t!("versão fixada no projeto ({minor})", minor = minor), Some(name), request),
+                None => pick(None, t!("o projeto fixa o PHP {minor}, que não está instalado", minor = minor), Some(name), request),
             };
         }
         return match &request {
             Some(req) => match best_installed(req, &installed) {
-                Some(p) => pick(Some(p), format!("mais nova compatível com {req}"), Some(name), request.clone()),
-                None => pick(None, format!("o projeto pede {req} e nenhuma versão instalada atende"), Some(name), request.clone()),
+                Some(p) => pick(Some(p), t!("mais nova compatível com {req}", req = req), Some(name), request.clone()),
+                None => pick(None, t!("o projeto pede {req} e nenhuma versão instalada atende", req = req), Some(name), request.clone()),
             },
-            None => pick(installed.first(), "mais nova instalada (o projeto não informa a versão)".into(), Some(name), None),
+            None => pick(installed.first(), t!("mais nova instalada (o projeto não informa a versão)"), Some(name), None),
         };
     }
 
@@ -97,11 +98,11 @@ pub fn select(paths: &Paths, dir: &Path) -> Selection {
         return match best_installed(&req, &installed) {
             Some(p) => pick(
                 Some(p),
-                format!("mais nova compatível com {req} (de {})", found.display()),
+                t!("mais nova compatível com {req} (de {a})", req = req, a = found.display()),
                 None,
                 Some(req),
             ),
-            None => pick(None, format!("{} pede {req} e nenhuma versão instalada atende", found.display()), None, Some(req)),
+            None => pick(None, t!("{a} pede {req} e nenhuma versão instalada atende", a = found.display(), req = req), None, Some(req)),
         };
     }
 
@@ -110,9 +111,9 @@ pub fn select(paths: &Paths, dir: &Path) -> Selection {
     if let Some(minor) = &config.default_php
         && let Some(p) = newest_of_minor(&installed, minor)
     {
-        return pick(Some(p), format!("versão padrão ({minor})"), None, None);
+        return pick(Some(p), t!("versão padrão ({minor})", minor = minor), None, None);
     }
-    pick(installed.first(), "mais nova instalada".into(), None, None)
+    pick(installed.first(), t!("mais nova instalada"), None, None)
 }
 
 #[cfg(test)]

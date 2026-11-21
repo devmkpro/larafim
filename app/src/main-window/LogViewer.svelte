@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import Glyph from "../lib/Glyph.svelte";
   import { confirm } from "../lib/php";
   import { toolsApi, type LogFile } from "../lib/tools";
@@ -64,7 +65,7 @@
   });
 
   async function clear() {
-    if (!(await confirm(`Esvaziar ${file}? O conteúdo atual do arquivo será apagado.`, "Limpar log", "Limpar"))) return;
+    if (!(await confirm(t("Esvaziar {file}? O conteúdo atual do arquivo será apagado.", { file }), t("Limpar log"), t("Limpar")))) return;
     await toolsApi.logClear(path, file);
     text = "";
     offset = 0;
@@ -74,11 +75,11 @@
 <svelte:window onkeydown={(e) => e.key === "Escape" && onclose()} />
 
 <div class="smoke" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
-  <div class="dialog" role="dialog" aria-modal="true" aria-label="Logs do projeto">
+  <div class="dialog" role="dialog" aria-modal="true" aria-label={t("Logs do projeto")}>
     <div class="head">
-      <h2>Logs · {name}</h2>
+      <h2>{t("Logs · {name}", { name })}</h2>
       <span class="grow"></span>
-      <button class="btn subtle icon" title="Fechar" onclick={onclose}><Glyph name="close" size={12} /></button>
+      <button class="btn subtle icon" title={t("Fechar")} onclick={onclose}><Glyph name="close" size={12} /></button>
     </div>
     {#if files.length}
       <div class="bar">
@@ -89,18 +90,18 @@
         </div>
         <label class="search">
           <Glyph name="search" size={14} />
-          <input class="input" placeholder="Filtrar" bind:value={filter} />
+          <input class="input" placeholder={t("Filtrar")} bind:value={filter} />
         </label>
-        <label class="check"><input type="checkbox" bind:checked={onlyErrors} /> Só erros</label>
+        <label class="check"><input type="checkbox" bind:checked={onlyErrors} /> {t("Só erros")}</label>
         <span class="grow"></span>
-        <button class="btn subtle" onclick={() => (paused = !paused)}>{paused ? "Continuar" : "Pausar"}</button>
-        <button class="btn subtle icon" title="Abrir no editor" onclick={() => toolsApi.logOpen(path, file)}><Glyph name="openExternal" /></button>
-        <button class="btn subtle icon" title="Limpar arquivo" onclick={clear}><Glyph name="delete" /></button>
+        <button class="btn subtle" onclick={() => (paused = !paused)}>{paused ? t("Continuar") : t("Pausar")}</button>
+        <button class="btn subtle icon" title={t("Abrir no editor")} onclick={() => toolsApi.logOpen(path, file)}><Glyph name="openExternal" /></button>
+        <button class="btn subtle icon" title={t("Limpar arquivo")} onclick={clear}><Glyph name="delete" /></button>
       </div>
       <pre bind:this={box}>{lines || "(vazio)"}</pre>
       {#if error}<p class="caption err">{error}</p>{/if}
     {:else}
-      <p class="empty caption">Nenhum arquivo .log em storage\logs (ou logs) deste projeto.</p>
+      <p class="empty caption">{t("Nenhum arquivo .log em storage\\logs (ou logs) deste projeto.")}</p>
     {/if}
   </div>
 </div>

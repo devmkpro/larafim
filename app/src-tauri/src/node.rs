@@ -1,5 +1,6 @@
 //! Comandos de versões do Node.js: catálogo, instalar, remover.
 
+use sentinel_core::t;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -111,12 +112,12 @@ pub async fn node_install(app: AppHandle, state: State<'_, NodeState>, major: St
         .await?
         .into_iter()
         .find(|e| e.major == major)
-        .ok_or_else(|| format!("o Node {major} não está no catálogo"))?;
+        .ok_or_else(|| t!("o Node {major} não está no catálogo", major = major))?;
     let cancel = Arc::new(AtomicBool::new(false));
     {
         let mut r = state.running.lock().unwrap();
         if r.contains_key(&major) {
-            return Err(format!("o Node {major} já está sendo instalado"));
+            return Err(t!("o Node {major} já está sendo instalado", major = major));
         }
         r.insert(major.clone(), cancel.clone());
     }

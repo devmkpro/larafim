@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import { onEvent } from "../lib/api";
   import { pickFolder } from "../lib/folders";
   import Glyph from "../lib/Glyph.svelte";
@@ -35,7 +36,7 @@
       }),
       onEvent<DevStatus>("node:status", (s) => {
         if (s.key === key && s.state === "exited" && s.exit_code !== 0) {
-          error = `O comando terminou com erro (código ${s.exit_code}). Veja a saída.`;
+          error = t("O comando terminou com erro (código {code}). Veja a saída.", { code: s.exit_code ?? "?" });
         }
       }),
       onEvent<Created>("laravel:created", (c) => {
@@ -66,7 +67,7 @@
   }
 
   async function chooseRoot() {
-    const dir = await pickFolder("Onde criar o projeto");
+    const dir = await pickFolder(t("Onde criar o projeto"));
     if (dir) root = dir;
   }
 
@@ -78,57 +79,57 @@
 <div class="smoke" role="presentation" onclick={(e) => e.target === e.currentTarget && !running && onclose()}>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="nl-title">
     <div class="content">
-      <h2 id="nl-title">Novo projeto Laravel</h2>
+      <h2 id="nl-title">{t("Novo projeto Laravel")}</h2>
       {#if key === null}
-        <label class="row"><span>Nome</span><input class="input" bind:value={name} placeholder="minha-loja" /></label>
+        <label class="row"><span>{t("Nome")}</span><input class="input" bind:value={name} placeholder="minha-loja" /></label>
         {#if slug && app.config}
-          <p class="caption preview">Endereço: <span class="mono">http://{slug}.{app.config.tld}</span></p>
+          <p class="caption preview">{t("Endereço:")} <span class="mono">http://{slug}.{app.config.tld}</span></p>
         {/if}
         <div class="row">
-          <span>Pasta</span>
+          <span>{t("Pasta")}</span>
           <span class="pair">
-            <span class="caption dir" title={root}>{root || "Escolha…"}</span>
-            <button class="btn subtle icon" title="Escolher pasta" onclick={chooseRoot}><Glyph name="folderOpen" /></button>
+            <span class="caption dir" title={root}>{root || t("Escolha…")}</span>
+            <button class="btn subtle icon" title={t("Escolher pasta")} onclick={chooseRoot}><Glyph name="folderOpen" /></button>
           </span>
         </div>
         <div class="row">
-          <span>Versão do PHP</span>
+          <span>{t("Versão do PHP")}</span>
           <div class="select">
             <select bind:value={phpMinor}>
               {#each minors as m (m)}<option value={m}>PHP {m}</option>{/each}
             </select>
           </div>
         </div>
-        {#if !minors.length}<p class="caption warn">Instale o PHP 8.2 ou mais novo em Configurações › PHP.</p>{/if}
+        {#if !minors.length}<p class="caption warn">{t("Instale o PHP 8.2 ou mais novo em Configurações › PHP.")}</p>{/if}
         <div class="row">
-          <span>Starter kit</span>
+          <span>{t("Starter kit")}</span>
           <div class="select">
             <select bind:value={kit}>
-              <option value="none">Nenhum (só Laravel)</option>
+              <option value="none">{t("Nenhum (só Laravel)")}</option>
               <option value="react">React</option>
               <option value="vue">Vue</option>
               <option value="livewire">Livewire</option>
             </select>
           </div>
         </div>
-        {#if kit !== "none"}<p class="caption preview">Inclui npm install e build (precisa do Node.js do Sentinel).</p>{/if}
+        {#if kit !== "none"}<p class="caption preview">{t("Inclui npm install e build (precisa do Node.js do Sentinel).")}</p>{/if}
         <div class="row">
-          <span>Banco de dados</span>
+          <span>{t("Banco de dados")}</span>
           <div class="select">
             <select bind:value={database}>
-              <option value="sqlite">SQLite (padrão do Laravel)</option>
-              <option value="mariadb">MariaDB compartilhado</option>
+              <option value="sqlite">{t("SQLite (padrão do Laravel)")}</option>
+              <option value="mariadb">{t("MariaDB compartilhado")}</option>
             </select>
           </div>
         </div>
       {:else}
         <p class="caption">
           {#if result?.ok}
-            Pronto! O projeto foi criado e já está na lista.
+            {t("Pronto! O projeto foi criado e já está na lista.")}
           {:else if error}
-            Não deu certo.
+            {t("Não deu certo.")}
           {:else}
-            Criando <span class="mono">{slug}</span>… isso pode levar alguns minutos.
+            {t("Criando")} <span class="mono">{slug}</span>… {t("isso pode levar alguns minutos.")}
           {/if}
         </p>
         <pre bind:this={box}>{output.join("\n") || "Iniciando…"}</pre>
@@ -137,13 +138,13 @@
     </div>
     <div class="footer">
       {#if key === null}
-        <button class="btn accent" disabled={!slug || !root || !phpMinor} onclick={create}>Criar</button>
-        <button class="btn" onclick={onclose}>Cancelar</button>
+        <button class="btn accent" disabled={!slug || !root || !phpMinor} onclick={create}>{t("Criar")}</button>
+        <button class="btn" onclick={onclose}>{t("Cancelar")}</button>
       {:else if result?.ok}
-        <button class="btn accent" onclick={() => ondone(result!.path)}>Abrir projeto</button>
-        <button class="btn" onclick={onclose}>Fechar</button>
+        <button class="btn accent" onclick={() => ondone(result!.path)}>{t("Abrir projeto")}</button>
+        <button class="btn" onclick={onclose}>{t("Fechar")}</button>
       {:else}
-        <button class="btn" disabled={running} onclick={onclose}>Fechar</button>
+        <button class="btn" disabled={running} onclick={onclose}>{t("Fechar")}</button>
       {/if}
     </div>
   </div>

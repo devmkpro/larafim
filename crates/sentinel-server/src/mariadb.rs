@@ -1,6 +1,7 @@
 //! Serviço MariaDB: um servidor local (127.0.0.1) iniciado sob demanda, com
 //! configuração leve. Dados em `data\mariadb\<linha>` (ex.: 11.8).
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
@@ -42,7 +43,7 @@ pub struct MariaStatus {
 pub enum MariaError {
     #[error("{0}")]
     Failed(String),
-    #[error("a porta {0} já está em uso")]
+    #[error("{}", sentinel_core::i18n::tf("a porta {0} já está em uso", &[("0", &.0 as &dyn std::fmt::Display)]))]
     PortBusy(u16),
 }
 
@@ -92,7 +93,7 @@ pub fn database_name(domain: &str) -> String {
         .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { '_' })
         .collect();
     s.truncate(64);
-    if s.is_empty() { "projeto".into() } else { s }
+    if s.is_empty() { t!("projeto") } else { s }
 }
 
 
@@ -136,7 +137,7 @@ impl MariaService {
             .map_err(|e| MariaError::Failed(format!("mariadb-install-db: {e}")))?;
         if !out.status.success() || !setup.data_dir.join("mysql").is_dir() {
             let msg = format!("{}{}", String::from_utf8_lossy(&out.stdout), String::from_utf8_lossy(&out.stderr));
-            return Err(MariaError::Failed(format!("não foi possível criar os dados do MariaDB: {}", msg.trim())));
+            return Err(MariaError::Failed(t!("não foi possível criar os dados do MariaDB: {a}", a = msg.trim())));
         }
         Ok(())
     }
@@ -212,7 +213,7 @@ impl MariaService {
             .await
             .as_ref()
             .map(|(s, _)| s.clone())
-            .ok_or_else(|| MariaError::Failed("o MariaDB não está rodando".into()))
+            .ok_or_else(|| MariaError::Failed(t!("o MariaDB não está rodando")))
     }
 
     /// Cliente de linha de comando ligado a este servidor (root, sem senha).

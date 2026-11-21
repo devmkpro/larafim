@@ -1,6 +1,7 @@
 //! Bancos que já existem no PC (MySQL/MariaDB do Laragon, XAMPP…):
 //! cadastrar, testar, detectar e usar nos projetos.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 
 use sentinel_core::DbConnection;
@@ -50,7 +51,7 @@ pub fn find(app: &AppHandle, id: &str) -> Result<DbConnection, String> {
         .iter()
         .find(|c| c.id == id)
         .cloned()
-        .ok_or_else(|| format!("conexão \"{id}\" não encontrada"))
+        .ok_or_else(|| t!("conexão \"{id}\" não encontrada", id = id))
 }
 
 /// Programas de linha de comando para falar com o servidor: os do próprio
@@ -65,8 +66,8 @@ fn client_dir(app: &AppHandle, kind: &str, own: Option<&Path>) -> Option<PathBuf
 }
 
 pub fn client_for(app: &AppHandle, c: &DbConnection) -> Result<DbClient, String> {
-    let bin_dir = client_dir(app, &c.kind, c.client_dir.as_deref()).ok_or(
-        "não achei os programas mysql/mysqldump desse servidor. Informe a pasta deles na conexão ou instale o MariaDB do Sentinel (só para ter as ferramentas).",
+    let bin_dir = client_dir(app, &c.kind, c.client_dir.as_deref()).ok_or_else(|| 
+        t!("não achei os programas mysql/mysqldump desse servidor. Informe a pasta deles na conexão ou instale o MariaDB do Sentinel (só para ter as ferramentas)."),
     )?;
     Ok(DbClient {
         bin_dir,
@@ -80,7 +81,7 @@ pub fn client_for(app: &AppHandle, c: &DbConnection) -> Result<DbClient, String>
 fn slug(name: &str) -> String {
     let s: String = name.to_lowercase().chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '-' }).collect();
     let s = s.split('-').filter(|p| !p.is_empty()).collect::<Vec<_>>().join("-");
-    if s.is_empty() { "banco".into() } else { s }
+    if s.is_empty() { t!("banco") } else { s }
 }
 
 fn to_connection(app: &AppHandle, input: ConnectionInput) -> Result<DbConnection, String> {
@@ -176,7 +177,7 @@ pub fn db_connection_remove(app: AppHandle, id: String) -> CmdResult<()> {
         .map(|p| p.domain.clone())
         .collect();
     if !users.is_empty() {
-        return Err(format!("a conexão é usada por: {}. Troque o banco desses projetos antes.", users.join(", ")));
+        return Err(t!("a conexão é usada por: {a}. Troque o banco desses projetos antes.", a = users.join(", ")));
     }
     let mut cfg = state.config.lock().unwrap();
     cfg.db_connections.retain(|c| c.id != id);

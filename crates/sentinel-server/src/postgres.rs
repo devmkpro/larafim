@@ -2,6 +2,7 @@
 //! com configuração leve. Dados em `data\postgres-<major>`. Usuário
 //! `postgres` sem senha (autenticação `trust`, só na máquina).
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::time::{Duration, Instant};
@@ -38,7 +39,7 @@ pub struct PgStatus {
 pub enum PgError {
     #[error("{0}")]
     Failed(String),
-    #[error("a porta {0} já está em uso")]
+    #[error("{}", sentinel_core::i18n::tf("a porta {0} já está em uso", &[("0", &.0 as &dyn std::fmt::Display)]))]
     PortBusy(u16),
 }
 
@@ -114,7 +115,7 @@ impl PgService {
             .map_err(|e| PgError::Failed(format!("initdb: {e}")))?;
         if !out.status.success() || !setup.data_dir.join("PG_VERSION").is_file() {
             let _ = std::fs::remove_dir_all(&setup.data_dir);
-            return Err(PgError::Failed(format!("não foi possível criar os dados do PostgreSQL: {}", output_error(&out))));
+            return Err(PgError::Failed(t!("não foi possível criar os dados do PostgreSQL: {a}", a = output_error(&out))));
         }
         Ok(())
     }
@@ -163,11 +164,11 @@ impl PgService {
                 let tail: Vec<&str> = text.lines().rev().take(6).collect();
                 let tail = tail.into_iter().rev().collect::<Vec<_>>().join(" | ");
                 let hint = if text.contains("administrative permissions") {
-                    " (o PostgreSQL não roda como administrador: abra o Sentinel sem \"Executar como administrador\")"
+                    t!(" (o PostgreSQL não roda como administrador: abra o Sentinel sem \"Executar como administrador\")")
                 } else {
-                    ""
+                    String::new()
                 };
-                return Err(PgError::Failed(format!("o PostgreSQL não iniciou: {tail}{hint}")));
+                return Err(PgError::Failed(t!("o PostgreSQL não iniciou: {tail}{hint}", tail = tail, hint = hint)));
             }
             tokio::time::sleep(Duration::from_millis(150)).await;
         }
@@ -201,7 +202,7 @@ impl PgService {
 
     pub async fn client(&self) -> Result<PgClient, PgError> {
         let g = self.inner.lock().await;
-        let (s, _) = g.as_ref().ok_or_else(|| PgError::Failed("o PostgreSQL não está rodando".into()))?;
+        let (s, _) = g.as_ref().ok_or_else(|| PgError::Failed(t!("o PostgreSQL não está rodando")))?;
         Ok(PgClient::for_setup(s))
     }
 }
@@ -248,7 +249,7 @@ impl PgClient {
     /// Cria o banco se ainda não existir.
     pub async fn create_database(&self, name: &str) -> Result<(), String> {
         if !valid_db(name) {
-            return Err(format!("nome de banco inválido: {name}"));
+            return Err(t!("nome de banco inválido: {name}", name = name));
         }
         if self.databases().await?.iter().any(|d| d == name) {
             return Ok(());
@@ -258,7 +259,7 @@ impl PgClient {
 
     pub async fn dump(&self, db: &str, file: &Path) -> Result<(), String> {
         if !valid_db(db) {
-            return Err(format!("nome de banco inválido: {db}"));
+            return Err(t!("nome de banco inválido: {db}", db = db));
         }
         let out = self
             .command("pg_dump")

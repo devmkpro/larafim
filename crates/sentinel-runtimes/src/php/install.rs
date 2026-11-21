@@ -1,5 +1,6 @@
 //! Instalação, atualização e remoção de versões do PHP.
 
+use sentinel_core::t;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 
@@ -57,7 +58,7 @@ pub async fn install(
     }
     if !tmp_dir.join("php.exe").is_file() {
         let _ = std::fs::remove_dir_all(&tmp_dir);
-        return Err(Error::Zip("o pacote não contém php.exe".into()));
+        return Err(Error::Zip(t!("o pacote não contém php.exe")));
     }
 
     on_stage(Stage::Configuring);
@@ -155,7 +156,7 @@ pub async fn verify(php: &InstalledPhp) -> Result<String> {
             return Err(Error::MissingVcRedist);
         }
         let stderr = String::from_utf8_lossy(&out.stderr);
-        return Err(Error::Verify(format!("código {code:#x}: {}", stderr.trim())));
+        return Err(Error::Verify(t!("código {a}: {b}", a = format!("{:#x}", code), b = stderr.trim())));
     }
     let stdout = String::from_utf8_lossy(&out.stdout).to_string();
     let first = stdout.lines().next().unwrap_or_default().to_string();

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { t } from "../lib/i18n.svelte";
   import { kindLabel, projectUrl } from "../lib/api";
   import Glyph from "../lib/Glyph.svelte";
   import { php, type PhpMatch } from "../lib/php";
@@ -43,7 +44,7 @@
 
   async function submit() {
     if (!cleanDomain) {
-      error = "Informe um domínio.";
+      error = t("Informe um domínio.");
       return;
     }
     saving = true;
@@ -73,7 +74,7 @@
     if (e.key === "Escape") onclose();
   }
 
-  const docrootLabel = (d: string) => (d ? `${d}\\` : "Raiz do projeto");
+  const docrootLabel = (d: string) => (d ? `${d}\\` : t("Raiz do projeto"));
 </script>
 
 <svelte:window onkeydown={onKey} />
@@ -81,7 +82,7 @@
 <div class="smoke" role="presentation" onclick={(e) => e.target === e.currentTarget && onclose()}>
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title" bind:this={dialog}>
     <div class="content">
-      <h2 id="dlg-title">Adicionar projeto</h2>
+      <h2 id="dlg-title">{t("Adicionar projeto")}</h2>
 
       <div class="folder">
         <Glyph name="folder" />
@@ -95,7 +96,7 @@
       {#if !proposal.recognized}
         <div class="notice warn">
           <Glyph name="info" size={14} />
-          <span>Não achei composer.json, index.php nem package.json. Vai ser tratado como site PHP simples.</span>
+          <span>{t("Não achei composer.json, index.php nem package.json. Vai ser tratado como site PHP simples.")}</span>
         </div>
       {/if}
 
@@ -107,22 +108,22 @@
         }}
       >
         <label class="row">
-          <span>Domínio</span>
+          <span>{t("Domínio")}</span>
           <span class="domain">
             <input class="input" bind:value={domain} spellcheck="false" />
             <span class="caption">.{app.config?.tld}</span>
           </span>
         </label>
         {#if app.config && cleanDomain}
-          <p class="caption preview">Endereço: <span class="mono">{projectUrl(app.config, cleanDomain)}</span></p>
+          <p class="caption preview">{t("Endereço:")} <span class="mono">{projectUrl(app.config, cleanDomain)}</span></p>
         {/if}
 
         {#if proposal.view_kind !== "node"}
           <div class="row">
-            <span>Versão do PHP</span>
+            <span>{t("Versão do PHP")}</span>
             <div class="select">
               <select bind:value={phpPin}>
-                <option value="">{match?.installed ? `Automática (${match.installed})` : "Automática"}</option>
+                <option value="">{match?.installed ? t("Automática ({v})", { v: match.installed }) : t("Automática")}</option>
                 {#each match?.available ?? [] as minor (minor)}
                   <option value={minor}>PHP {minor}</option>
                 {/each}
@@ -130,11 +131,11 @@
             </div>
           </div>
           {#if proposal.php_request}
-            <p class="caption preview">Pedida pelo projeto: {proposal.php_request}</p>
+            <p class="caption preview">{t("Pedida pelo projeto: {v}", { v: proposal.php_request })}</p>
           {/if}
 
           <div class="row">
-            <span>Pasta pública</span>
+            <span>{t("Pasta pública")}</span>
             <div class="select">
               <select bind:value={docroot}>
                 {#each proposal.docroots as d (d)}
@@ -147,12 +148,12 @@
 
         {#if proposal.has_node}
           <div class="row">
-            <span>Servidor do Node</span>
-            <Toggle label="Rodar o servidor de desenvolvimento do Node" checked={node} onchange={(v) => (node = v)} />
+            <span>{t("Servidor do Node")}</span>
+            <Toggle label={t("Rodar o servidor de desenvolvimento do Node")} checked={node} onchange={(v) => (node = v)} />
           </div>
           {#if node}
             <label class="row">
-              <span>Comando</span>
+              <span>{t("Comando")}</span>
               <input class="input mono-input" bind:value={nodeCommand} spellcheck="false" />
             </label>
           {/if}
@@ -170,8 +171,8 @@
     </div>
 
     <div class="footer">
-      <button class="btn accent" onclick={submit} disabled={saving}>Adicionar</button>
-      <button class="btn" onclick={onclose}>Cancelar</button>
+      <button class="btn accent" onclick={submit} disabled={saving}>{t("Adicionar")}</button>
+      <button class="btn" onclick={onclose}>{t("Cancelar")}</button>
     </div>
   </div>
 </div>

@@ -85,7 +85,7 @@ pub async fn execute(
         read_response(&mut stream).await
     })
     .await
-    .map_err(|_| std::io::Error::new(std::io::ErrorKind::TimedOut, "o PHP demorou demais para responder"))?
+    .map_err(|_| std::io::Error::new(std::io::ErrorKind::TimedOut, sentinel_core::t!("o PHP demorou demais para responder")))?
 }
 
 async fn read_response<R: AsyncReadExt + Unpin>(reader: &mut R) -> std::io::Result<FcgiResponse> {

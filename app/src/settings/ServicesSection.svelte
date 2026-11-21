@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { locale, t } from "../lib/i18n.svelte";
   import { onEvent } from "../lib/api";
   import Glyph from "../lib/Glyph.svelte";
   import { confirm } from "../lib/php";
@@ -42,9 +43,9 @@
   }
   async function pgRemove(major: string) {
     const ok = await confirm(
-      `Remover os programas do PostgreSQL ${major}? Os bancos (dados) ficam guardados e voltam se você reinstalar.`,
-      "Remover PostgreSQL",
-      "Remover",
+      t("Remover os programas do PostgreSQL {v}? Os bancos (dados) ficam guardados e voltam se você reinstalar.", { v: major }),
+      t("Remover PostgreSQL"),
+      t("Remover"),
     );
     if (ok) run(() => pg.remove(major));
   }
@@ -79,7 +80,7 @@
       hasPassword: false,
       input: {
         id: null,
-        name: d.kind === "mysql" ? `MySQL (porta ${d.port})` : `MariaDB (porta ${d.port})`,
+        name: t("{kind} (porta {port})", { kind: d.kind === "mysql" ? "MySQL" : "MariaDB", port: d.port }),
         kind: d.kind,
         host: "127.0.0.1",
         port: d.port,
@@ -105,7 +106,7 @@
   }
 
   async function removeConnection(c: ConnectionInfo) {
-    const ok = await confirm(`Tirar "${c.name}" do Sentinel? O servidor e os bancos dele não são alterados.`, "Remover conexão", "Remover");
+    const ok = await confirm(t('Tirar "{name}" do Sentinel? O servidor e os bancos dele não são alterados.', { name: c.name }), t("Remover conexão"), t("Remover"));
     if (ok) run(() => services.removeConnection(c.id));
   }
 
@@ -180,9 +181,9 @@
 
   async function remove(major: string) {
     const ok = await confirm(
-      `Remover os programas do MariaDB ${major}? Os bancos (dados) ficam guardados e voltam se você reinstalar.`,
-      "Remover MariaDB",
-      "Remover",
+      t("Remover os programas do MariaDB {v}? Os bancos (dados) ficam guardados e voltam se você reinstalar.", { v: major }),
+      t("Remover MariaDB"),
+      t("Remover"),
     );
     if (ok) run(() => services.remove(major));
   }
@@ -198,11 +199,11 @@
   }
 
   const installed = $derived(overview?.rows.filter((r) => r.installed) ?? []);
-  const mb = (n: number) => (n / 1024 / 1024).toLocaleString("pt-BR", { maximumFractionDigits: 0 });
+  const mb = (n: number) => (n / 1024 / 1024).toLocaleString(locale(), { maximumFractionDigits: 0 });
 </script>
 
-<h1>Serviços</h1>
-<p class="lead caption">Ficam desligados e só sobem quando algum projeto precisa — ou quando você liga aqui.</p>
+<h1>{t("Serviços")}</h1>
+<p class="lead caption">{t("Ficam desligados e só sobem quando algum projeto precisa — ou quando você liga aqui.")}</p>
 
 {#if error}
   <div class="infobar err"><Glyph name="info" /><span>{error}</span></div>
@@ -216,19 +217,19 @@
         <strong>MariaDB</strong>
         <span class="caption">
           {#if overview.status.running}
-            <span class="dot on inline"></span> Rodando · {overview.status.version} · porta {overview.status.port}
+            <span class="dot on inline"></span> {t("Rodando · {v} · porta {port}", { v: overview.status.version ?? "", port: overview.status.port ?? "" })}
           {:else if installed.length}
-            Desligado · liga sozinho quando um projeto que usa banco fica online
+            {t("Desligado · liga sozinho quando um projeto que usa banco fica online")}
           {:else}
-            Não instalado — ou use um banco que você já tem (abaixo)
+            {t("Não instalado — ou use um banco que você já tem (abaixo)")}
           {/if}
         </span>
       </div>
       {#if installed.length}
         {#if overview.status.running}
-          <button class="btn" disabled={busy} onclick={() => run(services.stop)}>Desligar</button>
+          <button class="btn" disabled={busy} onclick={() => run(services.stop)}>{t("Desligar")}</button>
         {:else}
-          <button class="btn accent" disabled={busy} onclick={() => run(services.start)}>Ligar</button>
+          <button class="btn accent" disabled={busy} onclick={() => run(services.start)}>{t("Ligar")}</button>
         {/if}
       {/if}
     </div>
@@ -236,20 +237,20 @@
     {#if installed.length}
       <div class="grid">
         <label class="field">
-          <span>Versão em uso</span>
+          <span>{t("Versão em uso")}</span>
           <div class="select">
             <select
               value={overview.selected ?? ""}
               disabled={busy}
               onchange={(e) => run(() => services.configure(e.currentTarget.value || null, overview!.port))}
             >
-              <option value="">Mais nova instalada</option>
+              <option value="">{t("Mais nova instalada")}</option>
               {#each installed as r (r.major)}<option value={r.major}>MariaDB {r.major}</option>{/each}
             </select>
           </div>
         </label>
         <label class="field">
-          <span>Porta</span>
+          <span>{t("Porta")}</span>
           <input
             class="input port"
             type="number"
@@ -262,14 +263,13 @@
         </label>
       </div>
       <p class="caption note">
-        Acesso: <span class="mono">127.0.0.1:{overview.port}</span>, usuário <span class="mono">root</span>, sem senha (só
-        neste PC). Se a 3306 já tiver outro banco (ex.: MySQL do Laragon), use 3307.
+        {t("Acesso:")} <span class="mono">127.0.0.1:{overview.port}</span>{t(", usuário")} <span class="mono">root</span>{t(", sem senha (só neste PC). Se a 3306 já tiver outro banco (ex.: MySQL do Laragon), use 3307.")}
       </p>
       {#if overview.status.running && overview.databases.length}
         <div class="dbs">
-          <span class="section-title">Bancos</span>
+          <span class="section-title">{t("Bancos")}</span>
           {#each overview.databases as db (db)}
-            <button class="chip" title="Abrir no Adminer" onclick={() => run(() => services.openAdminer(db))}>
+            <button class="chip" title={t("Abrir no Adminer")} onclick={() => run(() => services.openAdminer(db))}>
               <Glyph name="database" size={12} />
               {db}
             </button>
@@ -284,7 +284,7 @@
         <div class="tr">
           <div>
             <strong>MariaDB {row.major}</strong>
-            <span class="caption">LTS{row.eol ? ` até ${row.eol.slice(0, 4)}` : ""} · {row.latest ?? "—"}</span>
+            <span class="caption">LTS{row.eol ? " " + t("até {year}", { year: row.eol.slice(0, 4) }) : ""} · {row.latest ?? "—"}</span>
           </div>
           <div>
             {#if row.installed}
@@ -295,14 +295,14 @@
           <div class="actions">
             {#if p}
               <div class="progress">
-                <span class="caption">{p === "starting" ? "Preparando…" : `Baixando ${mb(p.received)}${p.total ? ` de ${mb(p.total)}` : ""} MB`}</span>
+                <span class="caption">{p === "starting" ? t("Preparando…") : (p.total ? t("Baixando {a} de {b} MB", { a: mb(p.received), b: mb(p.total) }) : t("Baixando {a} MB", { a: mb(p.received) }))}</span>
                 <ProgressBar value={p === "starting" || !p.total ? null : p.received / p.total} />
               </div>
             {:else if row.installed}
-              {#if row.update_available}<button class="btn accent" onclick={() => install(row.major)}>Atualizar</button>{/if}
-              <button class="btn subtle icon" title="Remover" onclick={() => remove(row.major)}><Glyph name="delete" /></button>
+              {#if row.update_available}<button class="btn accent" onclick={() => install(row.major)}>{t("Atualizar")}</button>{/if}
+              <button class="btn subtle icon" title={t("Remover")} onclick={() => remove(row.major)}><Glyph name="delete" /></button>
             {:else if row.latest}
-              <button class="btn" onclick={() => install(row.major)}>Instalar</button>
+              <button class="btn" onclick={() => install(row.major)}>{t("Instalar")}</button>
             {/if}
           </div>
         </div>
@@ -318,19 +318,19 @@
           <strong>PostgreSQL</strong>
           <span class="caption">
             {#if pgView.status.running}
-              <span class="dot on inline"></span> Rodando · {pgView.status.version} · porta {pgView.status.port}
+              <span class="dot on inline"></span> {t("Rodando · {v} · porta {port}", { v: pgView.status.version ?? "", port: pgView.status.port ?? "" })}
             {:else if pgInstalled.length}
-              Desligado · liga sozinho quando um projeto que usa PostgreSQL fica online
+              {t("Desligado · liga sozinho quando um projeto que usa PostgreSQL fica online")}
             {:else}
-              Opcional · instale só se algum projeto usa PostgreSQL (~50 MB)
+              {t("Opcional · instale só se algum projeto usa PostgreSQL (~50 MB)")}
             {/if}
           </span>
         </div>
         {#if pgInstalled.length}
           {#if pgView.status.running}
-            <button class="btn" disabled={busy} onclick={() => run(pg.stop)}>Desligar</button>
+            <button class="btn" disabled={busy} onclick={() => run(pg.stop)}>{t("Desligar")}</button>
           {:else}
-            <button class="btn accent" disabled={busy} onclick={() => run(pg.start)}>Ligar</button>
+            <button class="btn accent" disabled={busy} onclick={() => run(pg.start)}>{t("Ligar")}</button>
           {/if}
         {/if}
       </div>
@@ -338,20 +338,20 @@
       {#if pgInstalled.length}
         <div class="grid">
           <label class="field">
-            <span>Versão em uso</span>
+            <span>{t("Versão em uso")}</span>
             <div class="select">
               <select
                 value={pgView.selected ?? ""}
                 disabled={busy}
                 onchange={(e) => run(() => pg.configure(e.currentTarget.value || null, pgView!.port))}
               >
-                <option value="">Mais nova instalada</option>
+                <option value="">{t("Mais nova instalada")}</option>
                 {#each pgInstalled as r (r.major)}<option value={r.major}>PostgreSQL {r.major}</option>{/each}
               </select>
             </div>
           </label>
           <label class="field">
-            <span>Porta</span>
+            <span>{t("Porta")}</span>
             <input
               class="input port"
               type="number"
@@ -364,14 +364,13 @@
           </label>
         </div>
         <p class="caption note">
-          Acesso: <span class="mono">127.0.0.1:{pgView.port}</span>, usuário <span class="mono">postgres</span>, sem senha
-          (só neste PC).
+          {t("Acesso:")} <span class="mono">127.0.0.1:{pgView.port}</span>{t(", usuário")} <span class="mono">postgres</span>{t(", sem senha (só neste PC).")}
         </p>
         {#if pgView.status.running && pgView.databases.length}
           <div class="dbs">
-            <span class="section-title">Bancos</span>
+            <span class="section-title">{t("Bancos")}</span>
             {#each pgView.databases as db (db)}
-              <button class="chip" title="Abrir no Adminer" onclick={() => run(() => services.openAdminer(db, "postgres"))}>
+              <button class="chip" title={t("Abrir no Adminer")} onclick={() => run(() => services.openAdminer(db, "postgres"))}>
                 <Glyph name="database" size={12} />
                 {db}
               </button>
@@ -381,7 +380,7 @@
       {/if}
 
       {#if pgView.catalog_error}
-        <p class="caption note">Não foi possível ver as versões: {pgView.catalog_error}</p>
+        <p class="caption note">{t("Não foi possível ver as versões: {error}", { error: pgView.catalog_error })}</p>
       {/if}
       <div class="table">
         {#each pgView.rows as row (row.major)}
@@ -400,14 +399,14 @@
             <div class="actions">
               {#if p}
                 <div class="progress">
-                  <span class="caption">{p === "starting" ? "Preparando…" : `Baixando ${mb(p.received)}${p.total ? ` de ${mb(p.total)}` : ""} MB`}</span>
+                  <span class="caption">{p === "starting" ? t("Preparando…") : (p.total ? t("Baixando {a} de {b} MB", { a: mb(p.received), b: mb(p.total) }) : t("Baixando {a} MB", { a: mb(p.received) }))}</span>
                   <ProgressBar value={p === "starting" || !p.total ? null : p.received / p.total} />
                 </div>
               {:else if row.installed}
-                {#if row.update_available}<button class="btn accent" onclick={() => pgInstall(row.major)}>Atualizar</button>{/if}
-                <button class="btn subtle icon" title="Remover" onclick={() => pgRemove(row.major)}><Glyph name="delete" /></button>
+                {#if row.update_available}<button class="btn accent" onclick={() => pgInstall(row.major)}>{t("Atualizar")}</button>{/if}
+                <button class="btn subtle icon" title={t("Remover")} onclick={() => pgRemove(row.major)}><Glyph name="delete" /></button>
               {:else if row.latest}
-                <button class="btn" onclick={() => pgInstall(row.major)}>Instalar</button>
+                <button class="btn" onclick={() => pgInstall(row.major)}>{t("Instalar")}</button>
               {/if}
             </div>
           </div>
@@ -417,96 +416,96 @@
   {/if}
 
   {#if overview.own.length}
-    <h2 class="sub">MariaDB próprio de projetos</h2>
-    <p class="caption sub-lead">Servidores separados, com versão e dados só daquele projeto.</p>
+    <h2 class="sub">{t("MariaDB próprio de projetos")}</h2>
+    <p class="caption sub-lead">{t("Servidores separados, com versão e dados só daquele projeto.")}</p>
     {#each overview.own as o (o.path)}
       <SettingRow
         icon="database"
         title={o.project}
-        description={`MariaDB ${o.version} · porta ${o.port} · ${o.running ? "ligado" : "desligado"}`}
+        description={t("MariaDB {v} · porta {port} · {state}", { v: o.version, port: o.port, state: o.running ? t("ligado") : t("desligado") })}
       >
         {#if o.running}
-          <button class="btn" disabled={busy} onclick={() => run(() => services.ownStop(o.path))}>Desligar</button>
+          <button class="btn" disabled={busy} onclick={() => run(() => services.ownStop(o.path))}>{t("Desligar")}</button>
         {:else}
-          <button class="btn" disabled={busy} onclick={() => run(() => services.ownStart(o.path))}>Ligar</button>
+          <button class="btn" disabled={busy} onclick={() => run(() => services.ownStart(o.path))}>{t("Ligar")}</button>
         {/if}
         <button class="btn subtle" disabled={busy} onclick={() => run(() => services.openAdminer(null, null, o.path))}>Adminer</button>
       </SettingRow>
     {/each}
   {/if}
 
-  <h2 class="sub">Bancos que você já tem</h2>
+  <h2 class="sub">{t("Bancos que você já tem")}</h2>
   <p class="caption sub-lead">
-    Use um MySQL ou MariaDB que já roda no PC (Laragon, XAMPP…) nos projetos, sem instalar outro.
+    {t("Use um MySQL ou MariaDB que já roda no PC (Laragon, XAMPP…) nos projetos, sem instalar outro.")}
   </p>
   {#each detected.filter((d) => !d.known) as d (d.port)}
     <div class="infobar found">
       <Glyph name="database" />
       <span>
-        Encontrei um <strong>{d.kind === "mysql" ? "MySQL" : "MariaDB"}</strong> rodando na porta {d.port}
+        {t("Encontrei um")} <strong>{d.kind === "mysql" ? "MySQL" : "MariaDB"}</strong> {t("rodando na porta {port}", { port: d.port })}
         <span class="caption">({d.process}{d.hint ? ` · ${d.hint}` : ""})</span>
       </span>
-      <button class="btn accent" onclick={() => useDetected(d)}>Usar este</button>
+      <button class="btn accent" onclick={() => useDetected(d)}>{t("Usar este")}</button>
     </div>
   {/each}
   {#each connections as c (c.id)}
     <SettingRow
       icon="database"
       title={c.name}
-      description={`${c.kind === "mysql" ? "MySQL" : "MariaDB"} · ${c.user}@${c.host}:${c.port}${c.used_by.length ? ` · usado por ${c.used_by.join(", ")}` : ""}`}
+      description={`${c.kind === "mysql" ? "MySQL" : "MariaDB"} · ${c.user}@${c.host}:${c.port}${c.used_by.length ? " · " + t("usado por {list}", { list: c.used_by.join(", ") }) : ""}`}
     >
       <button class="btn" onclick={() => run(() => services.openAdminer(null, c.id))}>Adminer</button>
-      <button class="btn subtle icon" title="Editar" onclick={() => edit(c)}><Glyph name="settings" /></button>
-      <button class="btn subtle icon" title="Remover" onclick={() => removeConnection(c)}><Glyph name="delete" /></button>
+      <button class="btn subtle icon" title={t("Editar")} onclick={() => edit(c)}><Glyph name="settings" /></button>
+      <button class="btn subtle icon" title={t("Remover")} onclick={() => removeConnection(c)}><Glyph name="delete" /></button>
     </SettingRow>
   {/each}
-  <div class="add"><button class="btn" onclick={newConnection}><Glyph name="add" /> Adicionar banco existente</button></div>
+  <div class="add"><button class="btn" onclick={newConnection}><Glyph name="add" /> {t("Adicionar banco existente")}</button></div>
 
-  <h2 class="sub">Outros serviços</h2>
-  <SettingRow icon="globe" title="Adminer" description={`Gerenciar os bancos pelo navegador em ${overview.adminer_url.replace("http://", "")}`}>
+  <h2 class="sub">{t("Outros serviços")}</h2>
+  <SettingRow icon="globe" title="Adminer" description={t("Gerenciar os bancos pelo navegador em {url}", { url: overview.adminer_url.replace(/^https?:\/\//, "") })}>
     <button class="btn" disabled={busy || !installed.length} onclick={() => run(() => services.openAdminer())}>
-      <Glyph name="openExternal" /> Abrir
+      <Glyph name="openExternal" /> {t("Abrir")}
     </button>
   </SettingRow>
   <SettingRow
     icon="package"
-    title="Storage S3 local"
+    title={t("Storage S3 local")}
     description={s3st?.installed
       ? `RustFS ${s3st.version ?? ""} · API ${s3st.endpoint} · chave ${s3st.access_key} · ${s3st.running ? "ligado" : "desligado"}`
-      : "Testar upload de arquivos como na AWS, sem custo (RustFS, ~118 MB)"}
+      : t("Testar upload de arquivos como na AWS, sem custo (RustFS, ~118 MB)")}
   >
     {#if s3st?.installing || s3progress}
       <div class="progress">
-        <span class="caption">{s3progress ? `Baixando ${mb(s3progress.received)}${s3progress.total ? ` de ${mb(s3progress.total)}` : ""} MB` : "Preparando…"}</span>
+        <span class="caption">{s3progress ? (s3progress.total ? t("Baixando {a} de {b} MB", { a: mb(s3progress.received), b: mb(s3progress.total) }) : t("Baixando {a} MB", { a: mb(s3progress.received) })) : t("Preparando…")}</span>
         <ProgressBar value={s3progress?.total ? s3progress.received / s3progress.total : null} />
       </div>
     {:else if !s3st?.installed}
-      <button class="btn" disabled={busy} onclick={() => run(async () => { try { await s3.install(); } finally { s3progress = null; } })}>Instalar</button>
+      <button class="btn" disabled={busy} onclick={() => run(async () => { try { await s3.install(); } finally { s3progress = null; } })}>{t("Instalar")}</button>
     {:else if s3st.running}
-      <button class="btn" disabled={busy} onclick={() => run(s3.stop)}>Desligar</button>
+      <button class="btn" disabled={busy} onclick={() => run(s3.stop)}>{t("Desligar")}</button>
     {:else}
-      <button class="btn" disabled={busy} onclick={() => run(s3.start)}>Ligar</button>
+      <button class="btn" disabled={busy} onclick={() => run(s3.start)}>{t("Ligar")}</button>
     {/if}
     {#if s3st?.installed}
-      <button class="btn subtle" disabled={busy} onclick={() => run(s3.open)}>Abrir</button>
+      <button class="btn subtle" disabled={busy} onclick={() => run(s3.open)}>{t("Abrir")}</button>
     {/if}
   </SettingRow>
   <SettingRow
     icon="mail"
     title="Mailpit"
     description={mail?.installed
-      ? `Caixa de e-mails local · SMTP ${mail.smtp} · ${mail.running ? "ligado" : "desligado"}${mail.version ? ` · ${mail.version}` : ""}`
-      : "Caixa de e-mails local: tudo que os projetos enviam fica aqui, nada sai para a internet"}
+      ? t("Caixa de e-mails local · SMTP {smtp} · {state}", { smtp: mail.smtp, state: mail.running ? t("ligado") : t("desligado") }) + (mail.version ? ` · ${mail.version}` : "")
+      : t("Caixa de e-mails local: tudo que os projetos enviam fica aqui, nada sai para a internet")}
   >
     {#if !mail?.installed}
-      <button class="btn" disabled={busy} onclick={() => run(toolsApi.mailpitInstall)}>Instalar</button>
+      <button class="btn" disabled={busy} onclick={() => run(toolsApi.mailpitInstall)}>{t("Instalar")}</button>
     {:else if mail.running}
-      <button class="btn" disabled={busy} onclick={() => run(async () => toolsApi.mailpitStop())}>Desligar</button>
+      <button class="btn" disabled={busy} onclick={() => run(async () => toolsApi.mailpitStop())}>{t("Desligar")}</button>
     {:else}
-      <button class="btn" disabled={busy} onclick={() => run(toolsApi.mailpitStart)}>Ligar</button>
+      <button class="btn" disabled={busy} onclick={() => run(toolsApi.mailpitStart)}>{t("Ligar")}</button>
     {/if}
     {#if mail?.installed}
-      <button class="btn subtle" disabled={busy} onclick={() => run(toolsApi.openMailpit)}>Abrir</button>
+      <button class="btn subtle" disabled={busy} onclick={() => run(toolsApi.openMailpit)}>{t("Abrir")}</button>
     {/if}
   </SettingRow>
 {:else}

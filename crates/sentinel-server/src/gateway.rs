@@ -17,6 +17,7 @@ use hyper::server::conn::http1;
 use hyper::service::service_fn;
 use hyper::{Method, Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
+use sentinel_core::t;
 use tokio::net::TcpListener;
 use tokio::sync::watch;
 use tokio_util::io::ReaderStream;
@@ -57,6 +58,7 @@ struct Ctx {
     routes: SharedRoutes,
     pools: Arc<Pools>,
     port: u16,
+    https: bool,
 }
 
 pub struct Gateway {
@@ -67,10 +69,29 @@ pub struct Gateway {
 impl Gateway {
     /// Começa a escutar. Erro de porta ocupada volta como `AddrInUse`.
     pub async fn start(port: u16, routes: SharedRoutes, pools: Arc<Pools>) -> std::io::Result<Self> {
+        Self::listen(port, routes, pools, None).await
+    }
+
+    /// Mesmo gateway, em HTTPS (certificado por domínio via SNI).
+    pub async fn start_tls(
+        port: u16,
+        routes: SharedRoutes,
+        pools: Arc<Pools>,
+        tls: Arc<tokio_rustls::rustls::ServerConfig>,
+    ) -> std::io::Result<Self> {
+        Self::listen(port, routes, pools, Some(tokio_rustls::TlsAcceptor::from(tls))).await
+    }
+
+    async fn listen(
+        port: u16,
+        routes: SharedRoutes,
+        pools: Arc<Pools>,
+        tls: Option<tokio_rustls::TlsAcceptor>,
+    ) -> std::io::Result<Self> {
         let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, port)).await?;
         let (stop, mut stopped) = watch::channel(false);
-        let ctx = Arc::new(Ctx { routes, pools, port });
-        tracing::info!(port, "gateway escutando");
+        let ctx = Arc::new(Ctx { routes, pools, port, https: tls.is_some() });
+        tracing::info!(port, https = tls.is_some(), "gateway escutando");
 
         tokio::spawn(async move {
             loop {
@@ -78,13 +99,27 @@ impl Gateway {
                     accepted = listener.accept() => {
                         let Ok((stream, remote)) = accepted else { continue };
                         let ctx = ctx.clone();
+                        let tls = tls.clone();
                         tokio::spawn(async move {
                             let service = service_fn(move |req| handle(req, ctx.clone(), remote));
-                            let _ = http1::Builder::new()
-                                .keep_alive(true)
-                                .serve_connection(TokioIo::new(stream), service)
-                                .with_upgrades() // WebSocket (HMR do Vite/Next)
-                                .await;
+                            let mut builder = http1::Builder::new();
+                            match tls {
+                                Some(acceptor) => {
+                                    let Ok(stream) = acceptor.accept(stream).await else { return };
+                                    let _ = builder
+                                        .keep_alive(true)
+                                        .serve_connection(TokioIo::new(stream), service)
+                                        .with_upgrades()
+                                        .await;
+                                }
+                                None => {
+                                    let _ = builder
+                                        .keep_alive(true)
+                                        .serve_connection(TokioIo::new(stream), service)
+                                        .with_upgrades() // WebSocket (HMR do Vite/Next)
+                                        .await;
+                                }
+                            }
                         });
                     }
                     _ = stopped.changed() => break,
@@ -131,6 +166,7 @@ async fn handle(req: Request<Incoming>, ctx: Arc<Ctx>, remote: SocketAddr) -> Re
         .to_lowercase();
 
     let site = ctx.routes.read().unwrap().sites.get(&host).cloned();
+    let secure = ctx.https;
     let Some(site) = site else {
         let online: Vec<String> = {
             let routes = ctx.routes.read().unwrap();
@@ -147,7 +183,7 @@ async fn handle(req: Request<Incoming>, ctx: Arc<Ctx>, remote: SocketAddr) -> Re
     if let Some(cell) = &site.proxy {
         let port = *cell.lock().unwrap();
         return Ok(match port {
-            Some(port) => crate::proxy::forward(req, port, &host).await,
+            Some(port) => crate::proxy::forward(req, port, &host, secure).await,
             None => html(StatusCode::SERVICE_UNAVAILABLE, pages::node_starting(&site.name)),
         });
     }
@@ -157,7 +193,7 @@ async fn handle(req: Request<Incoming>, ctx: Arc<Ctx>, remote: SocketAddr) -> Re
     let response = match resolve(&site.docroot, &path, uses_php) {
         Target::Static(file) => serve_file(&req, file).await,
         Target::Php { script, script_name } => match &site.php {
-            Some(runtime) => run_php(req, &ctx, &site, &host, runtime, script, script_name, remote).await,
+            Some(runtime) => run_php(req, &ctx, &site, &host, runtime, script, script_name, remote, secure).await,
             None => html(StatusCode::SERVICE_UNAVAILABLE, pages::no_php(&site.name)),
         },
         Target::Forbidden => html(StatusCode::FORBIDDEN, pages::forbidden()),
@@ -169,7 +205,7 @@ async fn handle(req: Request<Incoming>, ctx: Arc<Ctx>, remote: SocketAddr) -> Re
 
 async fn serve_file(req: &Request<Incoming>, file: PathBuf) -> Response<Body> {
     if req.method() != Method::GET && req.method() != Method::HEAD {
-        return full(StatusCode::METHOD_NOT_ALLOWED, "text/plain", "Método não permitido");
+        return full(StatusCode::METHOD_NOT_ALLOWED, "text/plain", t!("Método não permitido"));
     }
     let Ok(handle) = tokio::fs::File::open(&file).await else {
         return html(StatusCode::NOT_FOUND, pages::not_found(req.uri().path()));
@@ -208,11 +244,12 @@ async fn run_php(
     script: PathBuf,
     script_name: String,
     remote: SocketAddr,
+    secure: bool,
 ) -> Response<Body> {
     let (parts, body) = req.into_parts();
     let body = match Limited::new(body, MAX_BODY).collect().await {
         Ok(b) => b.to_bytes(),
-        Err(_) => return full(StatusCode::PAYLOAD_TOO_LARGE, "text/plain", "Requisição grande demais"),
+        Err(_) => return full(StatusCode::PAYLOAD_TOO_LARGE, "text/plain", t!("Requisição grande demais")),
     };
 
     let uri = parts.uri.path_and_query().map(|p| p.as_str()).unwrap_or("/").to_string();
@@ -236,7 +273,11 @@ async fn run_php(
         ("REMOTE_PORT".into(), remote.port().to_string()),
         ("REDIRECT_STATUS".into(), "200".into()),
         ("CONTENT_LENGTH".into(), body.len().to_string()),
+        ("REQUEST_SCHEME".into(), if secure { "https" } else { "http" }.into()),
     ];
+    if secure {
+        params.push(("HTTPS".into(), "on".into()));
+    }
     if let Some(ct) = parts.headers.get(hyper::header::CONTENT_TYPE).and_then(|v| v.to_str().ok()) {
         params.push(("CONTENT_TYPE".into(), ct.to_string()));
     }

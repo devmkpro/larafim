@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { languages, t } from "../lib/i18n.svelte";
   import { api, onEvent, projectUrl, type SettingsSection, type Theme } from "../lib/api";
   import { pickFolder } from "../lib/folders";
   import Glyph, { type GlyphName } from "../lib/Glyph.svelte";
@@ -10,24 +11,25 @@
   import PhpSection from "./PhpSection.svelte";
   import ServicesSection from "./ServicesSection.svelte";
   import TerminalSection from "./TerminalSection.svelte";
+  import HttpsSettings from "./HttpsSettings.svelte";
   import SettingRow from "./SettingRow.svelte";
 
-  const nav: { id: SettingsSection; label: string; icon: GlyphName }[] = [
-    { id: "general", label: "Geral", icon: "settings" },
-    { id: "folders", label: "Pastas de projetos", icon: "folder" },
-    { id: "network", label: "Rede e domínios", icon: "globe" },
+  const nav = $derived<{ id: SettingsSection; label: string; icon: GlyphName }[]>([
+    { id: "general", label: t("Geral"), icon: "settings" },
+    { id: "folders", label: t("Pastas de projetos"), icon: "folder" },
+    { id: "network", label: t("Rede e domínios"), icon: "globe" },
     { id: "php", label: "PHP", icon: "code" },
     { id: "terminal", label: "Terminal", icon: "terminal" },
     { id: "node", label: "Node.js", icon: "package" },
-    { id: "services", label: "Serviços", icon: "database" },
-    { id: "about", label: "Sobre", icon: "info" },
-  ];
+    { id: "services", label: t("Serviços"), icon: "database" },
+    { id: "about", label: t("Sobre"), icon: "info" },
+  ]);
 
   const initial =
     (window as { __SENTINEL_SECTION__?: string }).__SENTINEL_SECTION__ ??
     new URLSearchParams(location.search).get("section") ??
     "general";
-  let section = $state<SettingsSection>(nav.some((n) => n.id === initial) ? (initial as SettingsSection) : "general");
+  let section = $state<SettingsSection>(["general", "folders", "network", "php", "terminal", "node", "services", "about"].includes(initial) ? (initial as SettingsSection) : "general");
   onEvent<SettingsSection>("settings:navigate", (s) => (section = s));
 
   const current = $derived(nav.find((n) => n.id === section)!);
@@ -72,7 +74,7 @@
   }
 
   async function addRoot() {
-    const dir = await pickFolder("Escolha uma pasta de projetos");
+    const dir = await pickFolder(t("Escolha uma pasta de projetos"));
     if (!dir || !app.config || app.config.roots.includes(dir)) return;
     await app.update({ roots: [...app.config.roots, dir] });
   }
@@ -80,10 +82,10 @@
 </script>
 
 <div class="window">
-  <TitleBar title="Configurações" />
+  <TitleBar title={t("Configurações")} />
 
   <div class="layout">
-    <nav aria-label="Seções">
+    <nav aria-label={t("Seções")}>
       {#each nav as item (item.id)}
         <button
           class="nav-item"
@@ -105,44 +107,55 @@
       {/if}
 
       {#if !app.config}
-        <p class="caption">Carregando…</p>
+        <p class="caption">{t("Carregando…")}</p>
       {:else if section === "general"}
-        <SettingRow icon="brush" title="Tema" description="Escolha a aparência do Sentinel">
+        <SettingRow icon="globe" title={t("Idioma")} description={t("Idioma da interface, das mensagens e da bandeja")}>
+          <div class="select">
+            <select value={app.config.language ?? "pt-BR"} onchange={(e) => app.update({ language: e.currentTarget.value })}>
+              {#each languages as l (l.code)}<option value={l.code}>{l.name}</option>{/each}
+            </select>
+          </div>
+        </SettingRow>
+        <SettingRow icon="brush" title={t("Tema")} description={t("Escolha a aparência do Sentinel")}>
           <div class="select">
             <select
               value={app.config.theme}
               onchange={(e) => app.update({ theme: e.currentTarget.value as Theme })}
             >
-              <option value="system">Seguir o Windows</option>
-              <option value="light">Claro</option>
-              <option value="dark">Escuro</option>
+              <option value="system">{t("Seguir o Windows")}</option>
+              <option value="light">{t("Claro")}</option>
+              <option value="dark">{t("Escuro")}</option>
             </select>
           </div>
         </SettingRow>
         <SettingRow
           icon="pin"
-          title="Continuar na bandeja ao fechar"
-          description="A janela sai da memória e o Sentinel segue no ícone da bandeja"
+          title={t("Continuar na bandeja ao fechar")}
+          description={t("A janela sai da memória e o Sentinel segue no ícone da bandeja")}
         >
           <span class="caption">{app.config.keep_in_tray ? "Ativado" : "Desativado"}</span>
           <Toggle
-            label="Continuar na bandeja ao fechar"
+            label={t("Continuar na bandeja ao fechar")}
             checked={app.config.keep_in_tray}
             onchange={(v) => app.update({ keep_in_tray: v })}
           />
         </SettingRow>
-        <SettingRow icon="play" title="Iniciar com o Windows" description="Disponível na fase 9">
-          <span class="caption">Desativado</span>
-          <Toggle label="Iniciar com o Windows" disabled />
+        <SettingRow icon="play" title={t("Iniciar com o Windows")} description={t("Abre só na bandeja ao entrar no Windows, sem janela")}>
+          <span class="caption">{app.config.start_with_windows ? "Ativado" : "Desativado"}</span>
+          <Toggle
+            label={t("Iniciar com o Windows")}
+            checked={app.config.start_with_windows}
+            onchange={(v) => app.update({ start_with_windows: v })}
+          />
         </SettingRow>
       {:else if section === "folders"}
-        <p class="lead caption">Cada subpasta destas pastas aparece como projeto. Nada é ligado sozinho.</p>
+        <p class="lead caption">{t("Cada subpasta destas pastas aparece como projeto. Nada é ligado sozinho.")}</p>
         {#each app.config.roots as root (root)}
           <SettingRow icon="folder" title={root}>
-            <button class="btn" onclick={() => api.openFolder(root)}>Abrir</button>
+            <button class="btn" onclick={() => api.openFolder(root)}>{t("Abrir")}</button>
             <button
               class="btn subtle icon"
-              title="Remover da lista (os arquivos não são apagados)"
+              title={t("Remover da lista (os arquivos não são apagados)")}
               onclick={() => app.update({ roots: app.config!.roots.filter((r) => r !== root) })}
             >
               <Glyph name="delete" />
@@ -150,22 +163,22 @@
           </SettingRow>
         {/each}
         <div class="actions">
-          <button class="btn accent" onclick={addRoot}><Glyph name="add" /> Adicionar pasta</button>
+          <button class="btn accent" onclick={addRoot}><Glyph name="add" /> {t("Adicionar pasta")}</button>
         </div>
 
         {#if ignored.length}
-          <h2 class="subhead">Projetos ignorados</h2>
-          <p class="lead caption">Não aparecem na lista de projetos. Os arquivos continuam onde estão.</p>
+          <h2 class="subhead">{t("Projetos ignorados")}</h2>
+          <p class="lead caption">{t("Não aparecem na lista de projetos. Os arquivos continuam onde estão.")}</p>
           {#each ignored as path (path)}
             <SettingRow icon="folder" title={path.split(/[\\/]/).pop() ?? path} description={path}>
-              <button class="btn" onclick={() => unignore(path)}>Mostrar de novo</button>
+              <button class="btn" onclick={() => unignore(path)}>{t("Mostrar de novo")}</button>
             </SettingRow>
           {/each}
         {/if}
       {:else if section === "network"}
         <SettingRow
           icon="globe"
-          title="Domínio dos projetos"
+          title={t("Domínio dos projetos")}
           description={`Exemplo: ${projectUrl(app.config, "loja")}`}
         >
           <span class="caption">.</span>
@@ -178,8 +191,8 @@
         </SettingRow>
         <SettingRow
           icon="server"
-          title="Porta HTTP"
-          description="Use outra porta se a 80 estiver ocupada (Laragon, IIS…)"
+          title={t("Porta HTTP")}
+          description={t("Use outra porta se a 80 estiver ocupada (Laragon, IIS…)")}
         >
           <input
             class="input port"
@@ -191,6 +204,7 @@
             onkeydown={(e) => e.key === "Enter" && commitPort()}
           />
         </SettingRow>
+        <HttpsSettings />
       {:else if section === "php"}
         <PhpSection />
       {:else if section === "terminal"}
@@ -200,9 +214,9 @@
       {:else if section === "services"}
         <ServicesSection />
       {:else if section === "about"}
-        <SettingRow icon="shield" title="Sentinel" description={`Versão ${app.info?.version}`} />
-        <SettingRow icon="folder" title="Pasta de dados" description={app.info?.data_dir}>
-          <button class="btn" onclick={() => api.openDataDir()}>Abrir</button>
+        <SettingRow icon="shield" title="Sentinel" description={t("Versão {v}", { v: app.info?.version ?? "" })} />
+        <SettingRow icon="folder" title={t("Pasta de dados")} description={app.info?.data_dir}>
+          <button class="btn" onclick={() => api.openDataDir()}>{t("Abrir")}</button>
         </SettingRow>
       {/if}
     </main>

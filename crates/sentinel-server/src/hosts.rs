@@ -10,6 +10,7 @@
 //! elevado (UAC) só para essa tarefa, e o ajudante só aceita linhas no formato
 //! acima — nada além do bloco do Sentinel é alterado.
 
+use sentinel_core::t;
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
@@ -20,9 +21,9 @@ const MAX_ENTRIES: usize = 2000;
 
 #[derive(Debug, thiserror::Error)]
 pub enum HostsError {
-    #[error("permissão negada: sem ela os endereços .offline não funcionam neste PC")]
+    #[error("{}", sentinel_core::i18n::tr("permissão negada: sem ela os endereços .offline não funcionam neste PC"))]
     Denied,
-    #[error("não foi possível atualizar o arquivo hosts ({0}). Um antivírus pode estar bloqueando.")]
+    #[error("{}", sentinel_core::i18n::tf("não foi possível atualizar o arquivo hosts ({0}). Um antivírus pode estar bloqueando.", &[("0", &.0 as &dyn std::fmt::Display)]))]
     Failed(String),
 }
 
@@ -114,7 +115,7 @@ pub fn is_up_to_date(wanted: &BTreeSet<String>) -> bool {
 /// `work_dir` é onde fica o arquivo com a lista pedida.
 pub fn request_update(wanted: &BTreeSet<String>, work_dir: &Path) -> Result<(), HostsError> {
     if wanted.iter().any(|h| !valid_host(h)) || wanted.len() > MAX_ENTRIES {
-        return Err(HostsError::Failed("lista de domínios inválida".into()));
+        return Err(HostsError::Failed(t!("lista de domínios inválida")));
     }
     let request = work_dir.join("hosts-request.txt");
     let list: Vec<&str> = wanted.iter().map(String::as_str).collect();
@@ -133,7 +134,7 @@ pub fn request_update(wanted: &BTreeSet<String>, work_dir: &Path) -> Result<(), 
             tracing::info!(domains = wanted.len(), "arquivo hosts atualizado");
             Ok(())
         }
-        Ok(s) => Err(HostsError::Failed(format!("código {:?}", s.code()))),
+        Ok(s) => Err(HostsError::Failed(t!("código {a}", a = format!("{:?}", s.code())))),
         // 1223 = ERROR_CANCELLED: a pessoa clicou em "Não" no UAC.
         Err(e) if e.raw_os_error() == Some(1223) => Err(HostsError::Denied),
         Err(e) => Err(HostsError::Failed(e.to_string())),

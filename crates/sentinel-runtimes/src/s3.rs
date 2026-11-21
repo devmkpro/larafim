@@ -2,6 +2,7 @@
 //! conferida pelo SHA-256. Também cria buckets com uma requisição S3
 //! assinada (AWS Signature V4), sem SDK.
 
+use sentinel_core::t;
 use std::path::PathBuf;
 use std::sync::atomic::AtomicBool;
 
@@ -34,11 +35,11 @@ pub fn parse_rustfs_release(json: &str) -> Result<(String, String, String)> {
     let asset = v["assets"]
         .as_array()
         .and_then(|a| a.iter().find(|x| x["name"] == wanted.as_str()))
-        .ok_or_else(|| Error::Catalog("RustFS sem pacote para Windows nesta versão".into()))?;
+        .ok_or_else(|| Error::Catalog(t!("RustFS sem pacote para Windows nesta versão")))?;
     let url = asset["browser_download_url"].as_str().unwrap_or_default().to_string();
     let sha = asset["digest"].as_str().and_then(|d| d.strip_prefix("sha256:")).unwrap_or_default().to_lowercase();
     if !url.starts_with(URL_PREFIX) || sha.len() != 64 || !sha.bytes().all(|c| c.is_ascii_hexdigit()) {
-        return Err(Error::Catalog("dados do RustFS incompletos (sem SHA-256)".into()));
+        return Err(Error::Catalog(t!("dados do RustFS incompletos (sem SHA-256)")));
     }
     Ok((tag, url, sha))
 }
@@ -62,7 +63,7 @@ pub async fn install_rustfs(
         let name = (0..a.len())
             .filter_map(|i| a.by_index(i).ok().and_then(|e| e.name().ok().map(|n| n.to_string())))
             .find(|n| n.rsplit('/').next() == Some("rustfs.exe") && !n.contains(".."))
-            .ok_or_else(|| Error::Zip("o pacote não contém rustfs.exe".into()))?;
+            .ok_or_else(|| Error::Zip(t!("o pacote não contém rustfs.exe")))?;
         let mut entry = a.by_name(&name).map_err(|e| Error::Zip(e.to_string()))?;
         let exe = d.join("rustfs.exe");
         let mut out = std::fs::File::create(&exe).map_err(|e| Error::io(&exe, e))?;
@@ -167,7 +168,7 @@ pub async fn create_bucket(client: &reqwest::Client, port: u16, access: &str, se
     if body.contains("BucketAlreadyOwnedByYou") {
         return Ok(());
     }
-    Err(Error::Catalog(format!("o storage S3 recusou criar o bucket {bucket} ({status}): {}", body.chars().take(300).collect::<String>())))
+    Err(Error::Catalog(t!("o storage S3 recusou criar o bucket {bucket} ({status}): {a}", bucket = bucket, status = status, a = body.chars().take(300).collect::<String>())))
 }
 
 

@@ -1,6 +1,7 @@
 //! PostgreSQL (fase 8): download opcional, um servidor sob demanda e um
 //! banco por projeto, como o MariaDB compartilhado.
 
+use sentinel_core::t;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
@@ -45,7 +46,7 @@ pub fn pg_setup(app: &AppHandle) -> Result<PgSetup, String> {
         Some(major) => installed.iter().find(|m| &m.major == major),
         None => installed.first(),
     }
-    .ok_or("o PostgreSQL não está instalado (Configurações › Serviços)")?;
+    .ok_or_else(|| t!("o PostgreSQL não está instalado (Configurações › Serviços)"))?;
     Ok(PgSetup {
         version: pick.version.clone(),
         install_dir: pick.dir.clone(),
@@ -62,8 +63,8 @@ fn pg_err(e: PgError) -> String {
                     Some(h) => format!("{} ({h})", o.name),
                     None => o.name,
                 })
-                .unwrap_or_else(|| "outro programa".into());
-            format!("A porta {p} já está em uso por {who}. Escolha outra porta para o PostgreSQL (ex.: {}).", p + 1)
+                .unwrap_or_else(|| t!("outro programa"));
+            t!("A porta {p} já está em uso por {who}. Escolha outra porta para o PostgreSQL (ex.: {a}).", p = p, who = who, a = p + 1)
         }
         PgError::Failed(m) => m,
     }
@@ -234,12 +235,12 @@ pub async fn pg_install(app: AppHandle, major: String) -> CmdResult<()> {
         .await?
         .into_iter()
         .find(|e| e.major == major)
-        .ok_or_else(|| format!("o PostgreSQL {major} não está no catálogo"))?;
+        .ok_or_else(|| t!("o PostgreSQL {major} não está no catálogo", major = major))?;
     let cancel = Arc::new(AtomicBool::new(false));
     {
         let mut i = state.installing.lock().unwrap();
         if i.contains_key(&major) {
-            return Err("já está instalando".into());
+            return Err(t!("já está instalando"));
         }
         i.insert(major.clone(), cancel.clone());
     }
@@ -279,7 +280,7 @@ pub async fn pg_install(app: AppHandle, major: String) -> CmdResult<()> {
 pub async fn pg_remove(app: AppHandle, major: String) -> CmdResult<()> {
     let st = app.state::<PgState>().svc.status().await;
     if st.running && st.version.as_deref().is_some_and(|v| v.split('.').next() == Some(major.as_str())) {
-        return Err("desligue o PostgreSQL antes de remover esta versão".into());
+        return Err(t!("desligue o PostgreSQL antes de remover esta versão"));
     }
     let paths = app.state::<AppState>().paths.clone();
     for m in postgres::list_installed(&postgres::postgres_dir(&paths)).into_iter().filter(|m| m.major == major) {
@@ -306,10 +307,10 @@ pub async fn pg_stop(app: AppHandle) -> CmdResult<()> {
 #[tauri::command]
 pub async fn pg_configure(app: AppHandle, version: Option<String>, port: u16) -> CmdResult<()> {
     if port < 1024 {
-        return Err("use uma porta acima de 1024 (ex.: 5432 ou 5433)".into());
+        return Err(t!("use uma porta acima de 1024 (ex.: 5432 ou 5433)"));
     }
     if crate::services::maria_ports(&app).contains(&port) {
-        return Err(format!("a porta {port} já é usada por um MariaDB do Sentinel"));
+        return Err(t!("a porta {port} já é usada por um MariaDB do Sentinel", port = port));
     }
     {
         let state = app.state::<AppState>();

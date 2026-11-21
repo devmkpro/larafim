@@ -1,5 +1,6 @@
 //! Quem está usando uma porta TCP (ex.: 80 ocupada pelo Apache do Laragon).
 
+use sentinel_core::t;
 use serde::Serialize;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -14,21 +15,21 @@ pub struct PortOwner {
 fn hint_for(name: &str, pid: u32) -> Option<String> {
     let n = name.to_lowercase();
     let hint = if pid == 4 {
-        "serviço do Windows (IIS / HTTP.sys)"
+        t!("serviço do Windows (IIS / HTTP.sys)")
     } else if n.contains("httpd") || n.contains("apache") {
-        "Apache — provavelmente do Laragon ou XAMPP"
+        t!("Apache — provavelmente do Laragon ou XAMPP")
     } else if n.contains("nginx") {
-        "Nginx — provavelmente do Laragon"
+        t!("Nginx — provavelmente do Laragon")
     } else if n.contains("laragon") {
-        "Laragon"
+        "Laragon".to_string()
     } else if n.contains("skype") {
-        "Skype"
+        "Skype".to_string()
     } else if n.contains("herd") {
-        "Laravel Herd"
+        "Laravel Herd".to_string()
     } else if n.contains("docker") || n.contains("wslrelay") || n.contains("vpnkit") {
-        "Docker / WSL"
+        "Docker / WSL".to_string()
     } else if n.contains("mysqld") || n.contains("mariadb") {
-        "MySQL/MariaDB"
+        "MySQL/MariaDB".to_string()
     } else {
         return None;
     };
@@ -182,7 +183,7 @@ pub fn check_free(port: u16) -> Result<(), Option<PortOwner>> {
         Err(_) => Err(Some(PortOwner {
             pid: 4,
             name: "System".into(),
-            hint: Some("porta reservada pelo Windows (IIS / HTTP.sys) ou sem permissão".into()),
+            hint: Some(t!("porta reservada pelo Windows (IIS / HTTP.sys) ou sem permissão")),
         })),
     }
 }

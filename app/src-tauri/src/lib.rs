@@ -11,6 +11,9 @@ mod projects;
 mod server;
 mod dbconn;
 mod secret;
+mod autostart;
+mod https;
+mod language;
 mod pg;
 mod s3;
 mod services;
@@ -45,10 +48,20 @@ pub fn run() {
     paths.ensure().expect("não foi possível criar a pasta de dados do Sentinel");
     let _log_guard = sentinel_core::logging::init(&paths.logs_dir());
 
-    let config = AppConfig::load(&paths.config_file()).unwrap_or_else(|e| {
+    let mut config = AppConfig::load(&paths.config_file()).unwrap_or_else(|e| {
         tracing::error!("configuração ilegível, usando padrão: {e}");
         AppConfig::default()
     });
+    // Idioma: o da configuração, ou o escolhido no instalador, ou o do Windows.
+    let (language, decided_now) = language::resolve(config.language.as_deref());
+    sentinel_core::i18n::set_language(&language);
+    if decided_now {
+        config.language = Some(language.clone());
+        if let Err(e) = config.save(&paths.config_file()) {
+            tracing::warn!("idioma não gravado: {e}");
+        }
+    }
+    tracing::info!(language, "idioma");
     let projects = ProjectsFile::load(&paths.projects_file()).unwrap_or_else(|e| {
         tracing::error!("projects.toml ilegível, começando vazio: {e}");
         ProjectsFile::default()
@@ -112,6 +125,11 @@ pub fn run() {
             pg::pg_start,
             pg::pg_stop,
             pg::pg_configure,
+            https::https_status,
+            https::https_configure,
+            https::https_trust,
+            https::https_untrust,
+            https::https_open_ca_folder,
             s3::s3_status,
             s3::s3_install,
             s3::s3_start,
@@ -172,7 +190,12 @@ pub fn run() {
             php::start_update_checker(app.handle().clone());
             server::start(app.handle());
             terminal::refresh_on_start(app.handle());
-            show_main_window(app.handle());
+            let autostart = app.state::<AppState>().config.lock().map(|c| c.start_with_windows).unwrap_or(false);
+            autostart::sync(autostart);
+            // Aberto pelo Windows ao entrar: fica só na bandeja.
+            if !autostart::started_in_tray() {
+                show_main_window(app.handle());
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -191,6 +214,21 @@ pub fn run() {
             }
         }
     });
+}
+
+/// Troca o idioma do backend: mensagens novas, menu da bandeja e título
+/// das janelas abertas (a interface troca sozinha pelo evento config-changed).
+pub(crate) fn language_changed(app: &AppHandle, code: &str) {
+    sentinel_core::i18n::set_language(code);
+    if let Some(w) = app.get_webview_window(SETTINGS_WINDOW) {
+        let _ = w.set_title(&sentinel_core::t!("Configurações — Sentinel"));
+    }
+    let app = app.clone();
+    tauri::async_runtime::spawn(async move {
+        let s = server::status(&app).await;
+        tray::update_online(&app, &s.online);
+    });
+    tracing::info!(code, "idioma trocado");
 }
 
 fn keep_in_tray(app: &AppHandle) -> bool {
@@ -259,7 +297,7 @@ pub fn show_settings_window(app: &AppHandle, section: &str) {
         "window.__SENTINEL_SECTION__ = {};",
         serde_json::to_string(section).unwrap_or_else(|_| "\"general\"".into())
     );
-    let result = window_builder(app, SETTINGS_WINDOW, "Configurações — Sentinel", (860.0, 620.0), (680.0, 460.0))
+    let result = window_builder(app, SETTINGS_WINDOW, &sentinel_core::t!("Configurações — Sentinel"), (860.0, 620.0), (680.0, 460.0))
         .initialization_script(&init)
         .build();
     if let Err(e) = result {

@@ -1,6 +1,7 @@
 //! Ferramentas (fase 7): Mailpit, logs do projeto, workers do Laravel,
 //! Xdebug e criação de projeto Laravel novo.
 
+use sentinel_core::t;
 use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
@@ -41,7 +42,7 @@ fn view_of(app: &AppHandle, path: &Path) -> Result<ProjectView, String> {
     crate::server::views(&app.state::<AppState>())
         .into_iter()
         .find(|v| same_path(&v.path, path))
-        .ok_or_else(|| "projeto não encontrado".into())
+        .ok_or_else(|| t!("projeto não encontrado"))
 }
 
 fn notify_projects(app: &AppHandle) {
@@ -59,7 +60,7 @@ pub(crate) fn update_project(app: &AppHandle, path: &Path, f: impl FnOnce(&mut s
             .projects
             .iter_mut()
             .find(|p| same_path(&p.path, path))
-            .ok_or("importe o projeto antes")?;
+            .ok_or_else(|| t!("importe o projeto antes"))?;
         f(p);
         store.save(&state.paths.projects_file()).map_err(|e| e.to_string())?;
     }
@@ -120,8 +121,8 @@ pub async fn start_mailpit(app: &AppHandle) -> Result<(), String> {
     }
     for port in [MAIL_UI_PORT, MAIL_SMTP_PORT] {
         if let Err(owner) = sentinel_server::port::check_free(port) {
-            let who = owner.map(|o| o.name).unwrap_or_else(|| "outro programa".into());
-            return Err(format!("a porta {port} (Mailpit) está ocupada por {who}"));
+            let who = owner.map(|o| o.name).unwrap_or_else(|| t!("outro programa"));
+            return Err(t!("a porta {port} (Mailpit) está ocupada por {who}", port = port, who = who));
         }
     }
     let data = paths.data_dir().join("mailpit");
@@ -196,7 +197,7 @@ pub async fn project_mail_apply(app: AppHandle, path: PathBuf, kind: String) -> 
             envfile::write(&path, &mail_changes(&kind)).map_err(|e| e.to_string())?;
         }
     } else if kind != "none" {
-        return Err(format!("serviço de e-mail desconhecido: {kind}"));
+        return Err(t!("serviço de e-mail desconhecido: {kind}", kind = kind));
     }
     update_project(&app, &path, |p| p.mail = (kind == "mailpit").then_some(kind.clone()))
 }
@@ -218,7 +219,7 @@ fn log_dir(project: &Path) -> PathBuf {
 
 fn safe_log(project: &Path, name: &str) -> Result<PathBuf, String> {
     if name.is_empty() || name.contains(['/', '\\', ':']) || name.contains("..") || !name.ends_with(".log") {
-        return Err("arquivo de log inválido".into());
+        return Err(t!("arquivo de log inválido"));
     }
     Ok(log_dir(project).join(name))
 }
@@ -303,13 +304,13 @@ fn worker_command(worker: &str) -> Option<&'static str> {
 
 /// Sobe um worker com o PHP do projeto.
 pub fn start_worker(app: &AppHandle, view: &ProjectView, worker: &str) -> Result<(), String> {
-    let args = worker_command(worker).ok_or("worker desconhecido")?;
+    let args = worker_command(worker).ok_or_else(|| t!("worker desconhecido"))?;
     if view.kind != ProjectKind::Laravel {
-        return Err("workers só existem em projetos Laravel".into());
+        return Err(t!("workers só existem em projetos Laravel"));
     }
     let installed = rphp::list_installed(&app.state::<AppState>().paths.php_dir());
     let (php, _) = crate::server::php_for(view, &installed);
-    let php = php.ok_or("nenhum PHP instalado atende a este projeto")?;
+    let php = php.ok_or_else(|| t!("nenhum PHP instalado atende a este projeto"))?;
     let exe = php.dir.join("php.exe");
     app.state::<ServerState>()
         .dev
@@ -344,7 +345,7 @@ pub fn start_workers(app: &AppHandle, view: &ProjectView) {
 /// Marca/desmarca um worker. Se o projeto estiver online, liga/desliga na hora.
 #[tauri::command]
 pub async fn worker_set(app: AppHandle, path: PathBuf, worker: String, enabled: bool) -> CmdResult<()> {
-    worker_command(&worker).ok_or("worker desconhecido")?;
+    worker_command(&worker).ok_or_else(|| t!("worker desconhecido"))?;
     update_project(&app, &path, |p| {
         p.workers.retain(|w| w != &worker);
         if enabled {
@@ -391,7 +392,7 @@ fn installed_php(app: &AppHandle, version: &str) -> Result<rphp::InstalledPhp, S
     rphp::list_installed(&app.state::<AppState>().paths.php_dir())
         .into_iter()
         .find(|p| p.version == version)
-        .ok_or_else(|| format!("o PHP {version} não está instalado"))
+        .ok_or_else(|| t!("o PHP {version} não está instalado", version = version))
 }
 
 #[tauri::command]
@@ -446,25 +447,25 @@ pub async fn laravel_create(app: AppHandle, input: NewLaravel) -> CmdResult<Stri
     let name = input.name.trim().to_lowercase();
     let valid = !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_');
     if !valid {
-        return Err("use só letras, números, - e _ no nome".into());
+        return Err(t!("use só letras, números, - e _ no nome"));
     }
-    let package = kit_package(&input.kit).ok_or("starter kit desconhecido")?;
+    let package = kit_package(&input.kit).ok_or_else(|| t!("starter kit desconhecido"))?;
     if !input.root.is_dir() {
-        return Err("a pasta escolhida não existe".into());
+        return Err(t!("a pasta escolhida não existe"));
     }
     let target = input.root.join(&name);
     if target.exists() {
-        return Err(format!("já existe uma pasta {name} ali"));
+        return Err(t!("já existe uma pasta {name} ali", name = name));
     }
     let paths = app.state::<AppState>().paths.clone();
     if !rphp::list_installed(&paths.php_dir()).iter().any(|p| p.minor == input.php) {
-        return Err(format!("o PHP {} não está instalado", input.php));
+        return Err(t!("o PHP {a} não está instalado", a = input.php));
     }
     if !sentinel_runtimes::extras::composer_path(&paths).is_file() {
-        return Err("o Composer ainda não foi baixado (instale um PHP pelo Sentinel)".into());
+        return Err(t!("o Composer ainda não foi baixado (instale um PHP pelo Sentinel)"));
     }
     if input.kit != "none" && sentinel_runtimes::node::list_installed(&paths.node_dir()).is_empty() {
-        return Err("os starter kits precisam do Node.js: instale em Configurações › Node.js".into());
+        return Err(t!("os starter kits precisam do Node.js: instale em Configurações › Node.js"));
     }
     // Os atalhos (php, composer, npm) escolhem as versões; SENTINEL_PHP fixa o PHP.
     crate::terminal::ensure_shims(&app)?;
@@ -508,8 +509,8 @@ pub fn on_process_exit(app: &AppHandle, key: &str, code: Option<i32>) {
         let result: Result<(), String> = async {
             if code != Some(0) || !job.path.join("artisan").is_file() {
                 return Err(match code {
-                    Some(c) => format!("a criação falhou (código {c}). Veja a saída."),
-                    None => "a criação foi interrompida. Veja a saída.".into(),
+                    Some(c) => t!("a criação falhou (código {c}). Veja a saída.", c = c),
+                    None => t!("a criação foi interrompida. Veja a saída."),
                 });
             }
             {
