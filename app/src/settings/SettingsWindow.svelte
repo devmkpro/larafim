@@ -133,7 +133,7 @@
           title={t("Continuar na bandeja ao fechar")}
           description={t("A janela sai da memória e o Sentinel segue no ícone da bandeja")}
         >
-          <span class="caption">{app.config.keep_in_tray ? "Ativado" : "Desativado"}</span>
+          <span class="caption">{app.config.keep_in_tray ? t("Ativado") : t("Desativado")}</span>
           <Toggle
             label={t("Continuar na bandeja ao fechar")}
             checked={app.config.keep_in_tray}
@@ -141,7 +141,7 @@
           />
         </SettingRow>
         <SettingRow icon="play" title={t("Iniciar com o Windows")} description={t("Abre só na bandeja ao entrar no Windows, sem janela")}>
-          <span class="caption">{app.config.start_with_windows ? "Ativado" : "Desativado"}</span>
+          <span class="caption">{app.config.start_with_windows ? t("Ativado") : t("Desativado")}</span>
           <Toggle
             label={t("Iniciar com o Windows")}
             checked={app.config.start_with_windows}

@@ -71,10 +71,10 @@
     icon="shield"
     title={t("HTTPS local")}
     description={status.enabled
-      ? `Projetos também em https://… na porta ${status.port}`
-      : "Abre os projetos em https:// com certificado do próprio Sentinel"}
+      ? t("Projetos também em https://… na porta {port}", { port: status.port })
+      : t("Abre os projetos em https:// com certificado do próprio Sentinel")}
   >
-    <span class="caption">{status.enabled ? "Ativado" : "Desativado"}</span>
+    <span class="caption">{status.enabled ? t("Ativado") : t("Desativado")}</span>
     <Toggle label={t("HTTPS local")} checked={status.enabled} disabled={busy} onchange={(v) => run(() => https.configure(v, Number(port)))} />
   </SettingRow>
   {#if status.enabled}

@@ -1,6 +1,15 @@
 {
   "_meta": { "name": "English", "nsis": "English", "langid": 1033 },
 
+  "Maximizar": "Maximize",
+  "Projetos também em https://… na porta {port}": "Projects also on https://… at port {port}",
+  "Abre os projetos em https:// com certificado do próprio Sentinel": "Opens projects over https:// with Sentinel's own certificate",
+  "Ativado": "On",
+  "Desativado": "Off",
+  "Copiar": "Copy",
+  "Ligada": "On",
+  "Desligada": "Off",
+  "RustFS {v} · API {endpoint} · chave {key} · {state}": "RustFS {v} · API {endpoint} · key {key} · {state}",
   " (o PostgreSQL não roda como administrador: abra o Sentinel sem \"Executar como administrador\")": " (PostgreSQL does not run as administrator: open Sentinel without \"Run as administrator\")",
   "(PowerShell) ou": "(PowerShell) or",
   "(cmd).": "(cmd).",

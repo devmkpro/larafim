@@ -63,7 +63,7 @@
     title={t("Usar em qualquer terminal")}
     description={t("Coloca a pasta dos comandos no começo do PATH do seu usuário (sem precisar de administrador). Vale para terminais abertos depois.")}
   >
-    <span class="caption">{status.in_path ? "Ativado" : "Desativado"}</span>
+    <span class="caption">{status.in_path ? t("Ativado") : t("Desativado")}</span>
     <Toggle
       label={t("Usar em qualquer terminal")}
       checked={status.in_path}

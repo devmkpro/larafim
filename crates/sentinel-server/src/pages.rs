@@ -100,3 +100,18 @@ pub fn proxy_error(port: u16, detail: &str) -> String {
         &format!("<pre>{}</pre>", escape(detail)),
     )
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn pages_follow_the_language() {
+        sentinel_core::i18n::set_language("en");
+        let html = super::unknown_site("x.offline", &[]);
+        assert!(html.contains(r#"<html lang="en">"#));
+        assert!(html.contains("Project not found"), "{html}");
+        assert!(html.contains("No Sentinel project uses the address <code>x.offline</code>."));
+        assert!(super::offline("loja").contains("The project <strong>loja</strong> is off."));
+        sentinel_core::i18n::set_language("pt-BR");
+        assert!(super::unknown_site("x.offline", &[]).contains("Projeto não encontrado"));
+    }
+}

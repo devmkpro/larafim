@@ -271,7 +271,7 @@
                 onclick={() => (selectedPath = p.path)}
                 onkeydown={() => {}}
               >
-                <span class="dot" class:on={p.online} title={p.online ? "Online" : "Offline"}></span>
+                <span class="dot" class:on={p.online} title={p.online ? t("Online") : t("Offline")}></span>
                 <span class="name">
                   <span class="label">{p.name}</span>
                   {#if p.status === "new"}<span class="tag new">{t("Novo")}</span>{/if}

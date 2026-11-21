@@ -471,7 +471,7 @@
     icon="package"
     title={t("Storage S3 local")}
     description={s3st?.installed
-      ? `RustFS ${s3st.version ?? ""} · API ${s3st.endpoint} · chave ${s3st.access_key} · ${s3st.running ? "ligado" : "desligado"}`
+      ? t("RustFS {v} · API {endpoint} · chave {key} · {state}", { v: s3st.version ?? "", endpoint: s3st.endpoint, key: s3st.access_key, state: s3st.running ? t("ligado") : t("desligado") })
       : t("Testar upload de arquivos como na AWS, sem custo (RustFS, ~118 MB)")}
   >
     {#if s3st?.installing || s3progress}

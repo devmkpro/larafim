@@ -29,7 +29,7 @@
     <button class="cb" title={t("Minimizar")} onclick={() => win?.minimize()}>
       <Glyph name="minimize" size={10} />
     </button>
-    <button class="cb" title={maximized ? "Restaurar" : "Maximizar"} onclick={() => win?.toggleMaximize()}>
+    <button class="cb" title={maximized ? t("Restaurar") : t("Maximizar")} onclick={() => win?.toggleMaximize()}>
       <Glyph name={maximized ? "restore" : "maximize"} size={10} />
     </button>
     <button class="cb close" title={t("Fechar")} onclick={() => win?.close()}>

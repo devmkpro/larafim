@@ -157,7 +157,7 @@
         <pre>{xdebug.launch_json}</pre>
         <button
           class="btn subtle icon"
-          title={copied ? "Copiado!" : "Copiar"}
+          title={copied ? t("Copiado!") : t("Copiar")}
           onclick={() => navigator.clipboard.writeText(xdebug!.launch_json).then(() => ((copied = true), setTimeout(() => (copied = false), 1500)))}
         >
           <Glyph name={copied ? "check" : "copy"} />
@@ -180,7 +180,7 @@
         <span class="mono">{ext.name}</span>
         {#if ext.zend}<span class="tag">zend</span>{/if}
         <span class="grow"></span>
-        <span class="caption">{ext.enabled ? "Ligada" : "Desligada"}</span>
+        <span class="caption">{ext.enabled ? t("Ligada") : t("Desligada")}</span>
         <Toggle label={t("Extensão {name}", { name: ext.name })} checked={ext.enabled} onchange={(v) => toggleExt(ext.name, v)} />
       </div>
     {:else}
