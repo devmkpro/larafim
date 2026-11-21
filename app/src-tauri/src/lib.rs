@@ -16,10 +16,12 @@ mod https;
 mod language;
 mod pg;
 mod s3;
+mod service_info;
 mod services;
 mod terminal;
 mod tools;
 mod tray;
+mod tray_panel;
 
 use std::sync::Mutex;
 
@@ -28,6 +30,7 @@ use tauri::{AppHandle, Emitter, Manager, RunEvent, WebviewUrl, WebviewWindowBuil
 
 pub const MAIN_WINDOW: &str = "main";
 pub const SETTINGS_WINDOW: &str = "settings";
+pub const LOGS_WINDOW: &str = "logs";
 
 /// Argumentos do WebView2. Os 3 primeiros são os padrões do Tauri
 /// (substituídos ao definir args). Sem GPU e com um só processo de
@@ -84,11 +87,15 @@ pub fn run() {
         .manage(tools::ToolsState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
+            service_info::service_info,
             commands::save_config,
             commands::app_info,
             commands::open_data_dir,
             commands::open_folder,
             commands::open_settings,
+            commands::open_logs,
+            tray_panel::tray_fit,
+            tray_panel::tray_action,
             projects::list_projects,
             projects::import_project,
             projects::import_all,
@@ -223,6 +230,9 @@ pub(crate) fn language_changed(app: &AppHandle, code: &str) {
     if let Some(w) = app.get_webview_window(SETTINGS_WINDOW) {
         let _ = w.set_title(&sentinel_core::t!("Configurações — Sentinel"));
     }
+    if let Some(w) = app.get_webview_window(LOGS_WINDOW) {
+        let _ = w.set_title(&sentinel_core::t!("Logs — Sentinel"));
+    }
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
         let s = server::status(&app).await;
@@ -286,6 +296,54 @@ pub fn show_main_window(app: &AppHandle) {
     }
 }
 
+/// Abre a janela principal já com o diálogo de novo projeto Laravel.
+pub fn show_main_window_new_laravel(app: &AppHandle) {
+    if focus_existing(app, MAIN_WINDOW) {
+        let _ = app.emit_to(MAIN_WINDOW, "main:new-laravel", ());
+        return;
+    }
+    let result = window_builder(app, MAIN_WINDOW, "Sentinel", (1120.0, 720.0), (860.0, 520.0))
+        .initialization_script("window.__SENTINEL_NEW_LARAVEL__ = true;")
+        .build();
+    if let Err(e) = result {
+        tracing::error!("não foi possível abrir a janela principal: {e}");
+    }
+}
+
+/// Janela de painel (bandeja): sem moldura, fundo translúcido do Windows 11.
+fn panel_builder<'a>(app: &'a AppHandle, label: &'a str, size: (f64, f64)) -> WebviewWindowBuilder<'a, tauri::Wry, AppHandle> {
+    use tauri::window::{Effect, EffectsBuilder};
+    WebviewWindowBuilder::new(app, label, WebviewUrl::default())
+        .title("Sentinel")
+        .inner_size(size.0, size.1)
+        .decorations(false)
+        .shadow(true)
+        .transparent(true)
+        .effects(EffectsBuilder::new().effect(Effect::Acrylic).build())
+        .theme(native_theme(app))
+        .additional_browser_args(BROWSER_ARGS)
+}
+
+/// Abre (ou traz para frente) o visualizador de logs, já num projeto se vier um.
+pub fn show_logs_window(app: &AppHandle, project: Option<&str>) {
+    if focus_existing(app, LOGS_WINDOW) {
+        if let Some(p) = project {
+            let _ = app.emit_to(LOGS_WINDOW, "logs:navigate", p);
+        }
+        return;
+    }
+    let init = format!(
+        "window.__SENTINEL_LOGS_PROJECT__ = {};",
+        serde_json::to_string(&project).unwrap_or_else(|_| "null".into())
+    );
+    let result = window_builder(app, LOGS_WINDOW, &sentinel_core::t!("Logs — Sentinel"), (1100.0, 700.0), (720.0, 460.0))
+        .initialization_script(&init)
+        .build();
+    if let Err(e) = result {
+        tracing::error!("não foi possível abrir os logs: {e}");
+    }
+}
+
 /// Abre (ou traz para frente) a janela de Configurações numa seção.
 pub fn show_settings_window(app: &AppHandle, section: &str) {
     if focus_existing(app, SETTINGS_WINDOW) {
@@ -297,7 +355,7 @@ pub fn show_settings_window(app: &AppHandle, section: &str) {
         "window.__SENTINEL_SECTION__ = {};",
         serde_json::to_string(section).unwrap_or_else(|_| "\"general\"".into())
     );
-    let result = window_builder(app, SETTINGS_WINDOW, &sentinel_core::t!("Configurações — Sentinel"), (860.0, 620.0), (680.0, 460.0))
+    let result = window_builder(app, SETTINGS_WINDOW, &sentinel_core::t!("Configurações — Sentinel"), (1040.0, 680.0), (760.0, 480.0))
         .initialization_script(&init)
         .build();
     if let Err(e) = result {

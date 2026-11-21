@@ -34,6 +34,9 @@
     logs: "",
     bug: "",
     mailOpen: "",
+    power: "",
+    apps: "",
+    stop: "",
   } as const;
 
   export type GlyphName = keyof typeof glyphs;

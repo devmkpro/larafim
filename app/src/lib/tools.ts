@@ -53,7 +53,26 @@ export const workerKey = (path: string, w: Worker) => `${path.toLowerCase()}|${w
 // ---------- Dados de exemplo (navegador) ----------
 let mailRunning = false;
 let xdebugOn = false;
-let mockLog = "[2026-11-20 18:00:01] local.INFO: Pedido 42 criado\n[2026-11-20 18:00:05] local.ERROR: Falha ao enviar e-mail {\"exception\":\"Connection refused\"}\n";
+let mockLog = [
+  "[2026-11-20 18:00:01] local.INFO: Pedido 42 criado  ",
+  '[2026-11-20 18:00:02] local.DEBUG: Cache da vitrine renovado {"chaves":12}',
+  "[2026-11-20 18:00:03] local.WARNING: Imagem do produto 7 não encontrada, usando a padrão  ",
+  "[2026-11-20 18:00:04] local.INFO: Pedido 43 criado  ",
+  '[2026-11-20 18:00:05] local.ERROR: cURL error 7: Failed to connect to frete.exemplo port 443 {"userId":3,"exception":"[object] (Illuminate\\\\Http\\\\Client\\\\ConnectionException(code: 0): cURL error 7: Failed to connect to frete.exemplo port 443 at C:\\\\Projetos\\\\loja-virtual\\\\vendor\\\\laravel\\\\framework\\\\src\\\\Illuminate\\\\Http\\\\Client\\\\PendingRequest.php:1621)',
+  "[stacktrace]",
+  "#0 C:\\\\Projetos\\\\loja-virtual\\\\vendor\\\\laravel\\\\framework\\\\src\\\\Illuminate\\\\Support\\\\helpers.php(338): Illuminate\\\\Http\\\\Client\\\\PendingRequest->Illuminate\\\\Http\\\\Client\\\\{closure}()",
+  "#1 C:\\\\Projetos\\\\loja-virtual\\\\vendor\\\\laravel\\\\framework\\\\src\\\\Illuminate\\\\Http\\\\Client\\\\PendingRequest.php(927): retry()",
+  "#2 C:\\\\Projetos\\\\loja-virtual\\\\vendor\\\\laravel\\\\framework\\\\src\\\\Illuminate\\\\Http\\\\Client\\\\PendingRequest.php(784): Illuminate\\\\Http\\\\Client\\\\PendingRequest->send()",
+  "#3 C:\\\\Projetos\\\\loja-virtual\\\\app\\\\Services\\\\Frete.php(21): Illuminate\\\\Http\\\\Client\\\\PendingRequest->get()",
+  "#4 C:\\\\Projetos\\\\loja-virtual\\\\app\\\\Http\\\\Controllers\\\\CarrinhoController.php(48): App\\\\Services\\\\Frete->calcular()",
+  "#5 C:\\\\Projetos\\\\loja-virtual\\\\vendor\\\\laravel\\\\framework\\\\src\\\\Illuminate\\\\Routing\\\\Controller.php(54): App\\\\Http\\\\Controllers\\\\CarrinhoController->frete()",
+  "#6 C:\\\\Projetos\\\\loja-virtual\\\\vendor\\\\laravel\\\\framework\\\\src\\\\Illuminate\\\\Routing\\\\ControllerDispatcher.php(43): Illuminate\\\\Routing\\\\Controller->callAction()",
+  "#7 C:\\\\Projetos\\\\loja-virtual\\\\public\\\\index.php(17): Illuminate\\\\Foundation\\\\Application->handleRequest()",
+  "#8 {main}",
+  '"} ',
+  "[2026-11-20 18:00:06] local.INFO: Pedido 44 criado  ",
+  "",
+].join("\n");
 
 const mock = {
   mailpitStatus: async (): Promise<MailpitStatus> => ({

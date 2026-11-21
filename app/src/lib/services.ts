@@ -89,6 +89,14 @@ export interface ConnectionInput {
   client_dir: string | null;
 }
 
+/** Painel de detalhes de um serviço. */
+export interface ServiceInfo {
+  data_dir: string | null;
+  log_file: string | null;
+  log: string[];
+  env: [string, string][];
+}
+
 export interface DetectedDb {
   port: number;
   kind: "mysql" | "mariadb";
@@ -177,6 +185,19 @@ const mock = {
     mockConnections = mockConnections.filter((c) => c.id !== id);
     mockEmit("services-changed", null);
   },
+  info: async (service: string, _project: string | null = null): Promise<ServiceInfo> => ({
+    data_dir: "C:\\Users\\voce\\AppData\\Local\\Sentinel\\data\\" + service,
+    log_file: null,
+    log: ["2026-11-21 10:00:00 0 [Note] Server ready for connections", "2026-11-21 10:00:00 0 [Note] port: 3307"],
+    env: [
+      ["DB_CONNECTION", "mariadb"],
+      ["DB_HOST", "127.0.0.1"],
+      ["DB_PORT", "3307"],
+      ["DB_DATABASE", "laravel"],
+      ["DB_USERNAME", "root"],
+      ["DB_PASSWORD", ""],
+    ],
+  }),
   detect: async (): Promise<DetectedDb[]> => [
     { port: 3306, kind: "mysql", process: "mysqld.exe", hint: "MySQL/MariaDB", client_dir: "C:\laragon\bin\mysql\mysql-8.0.30-winx64\bin", known: mockConnections.some((c) => c.port === 3306) },
   ],
@@ -210,5 +231,6 @@ export const services = inTauri
       saveConnection: (input: ConnectionInput) => invoke<string>("db_connection_save", { input }),
       removeConnection: (id: string) => invoke<void>("db_connection_remove", { id }),
       detect: () => invoke<DetectedDb[]>("db_detect"),
+      info: (service: string, project: string | null = null) => invoke<ServiceInfo>("service_info", { service, project }),
     }
   : mock;

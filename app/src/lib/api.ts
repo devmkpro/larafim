@@ -63,6 +63,9 @@ const mock = {
   }),
   openDataDir: async () => {},
   openFolder: async (_path: string) => {},
+  openLogs: async (project: string | null = null) => {
+    window.open(`/?window=logs${project ? "&project=" + encodeURIComponent(project) : ""}`, "_blank");
+  },
   openSettings: async (section: SettingsSection = "general") => {
     window.open(`/?window=settings&section=${section}`, "_blank");
   },
@@ -76,6 +79,7 @@ export const api = inTauri
       openDataDir: () => invoke<void>("open_data_dir"),
       openFolder: (path: string) => invoke<void>("open_folder", { path }),
       openSettings: (section: SettingsSection = "general") => invoke<void>("open_settings", { section }),
+      openLogs: (project: string | null = null) => invoke<void>("open_logs", { project }),
     }
   : mock;
 

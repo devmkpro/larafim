@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { t } from "../lib/i18n.svelte";
+  import { plural, t } from "../lib/i18n.svelte";
   import { api, kindLabel, onEvent, projectUrl } from "../lib/api";
   import { pickFolder } from "../lib/folders";
   import Glyph from "../lib/Glyph.svelte";
@@ -21,7 +21,8 @@
   /** Muda quando um PHP é instalado/removido, para o painel recalcular a versão. */
   let phpVersionTick = $state(0);
   let status = $state<ServerStatus | null>(null);
-  let creating = $state(false);
+  // Aberta pelo painel da bandeja em "Novo projeto Laravel": já começa no diálogo.
+  let creating = $state(!!(window as { __SENTINEL_NEW_LARAVEL__?: boolean }).__SENTINEL_NEW_LARAVEL__);
   /** Diálogo de adicionar/revisar projeto. */
   let proposal = $state<FolderProposal | null>(null);
 
@@ -42,7 +43,6 @@
   });
 
   /** Plural simples: chaves "{n} item" / "{n} itens" (cada idioma traduz as duas). */
-  const plural = (n: number, one: string, many: string) => t(n === 1 ? one : many, { n });
   const newCount = $derived(projects.filter((p) => p.status === "new").length);
   const selected = $derived(projects.find((p) => p.path === selectedPath) ?? null);
 
@@ -120,6 +120,7 @@
         phpVersionTick++;
       }),
       onEvent<ProjectsOverview>("projects-changed", apply),
+      onEvent("main:new-laravel", () => (creating = true)),
       onEvent<ServerStatus>("server-status", (s) => (status = s)),
       onEvent<ServerError>("server-error", (e) => (app.error = asServerError(e).message)),
     ];

@@ -23,7 +23,7 @@ type CmdResult<T> = Result<T, String>;
 
 pub const MAILPIT_KEY: &str = "service:mailpit";
 const MAIL_UI_PORT: u16 = 8025;
-const MAIL_SMTP_PORT: u16 = 1025;
+pub(crate) const MAIL_SMTP_PORT: u16 = 1025;
 
 #[derive(Default)]
 pub struct ToolsState {

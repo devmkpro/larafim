@@ -14,6 +14,7 @@ use crate::server::OnlineSite;
 const TRAY_ID: &str = "sentinel";
 const OPEN: &str = "open";
 const SETTINGS: &str = "settings";
+const LOGS: &str = "logs";
 const STOP_ALL: &str = "stop-all";
 const QUIT: &str = "quit";
 const URL_PREFIX: &str = "url:";
@@ -32,6 +33,7 @@ fn build_menu(app: &AppHandle, online: &[OnlineSite]) -> tauri::Result<Menu<Wry>
         menu.append(&MenuItem::with_id(app, STOP_ALL, &t!("Desligar todos os projetos"), true, None::<&str>)?)?;
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
+    menu.append(&MenuItem::with_id(app, LOGS, &t!("Visualizador de logs"), true, None::<&str>)?)?;
     menu.append(&MenuItem::with_id(app, SETTINGS, &t!("Configurações…"), true, None::<&str>)?)?;
     menu.append(&MenuItem::with_id(app, QUIT, &t!("Sair do Sentinel"), true, None::<&str>)?)?;
     Ok(menu)
@@ -48,6 +50,7 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
             match id {
                 OPEN => crate::show_main_window(app),
                 SETTINGS => crate::show_settings_window(app, "general"),
+                LOGS => crate::show_logs_window(app, None),
                 STOP_ALL => {
                     let app = app.clone();
                     tauri::async_runtime::spawn(async move { crate::server::stop_all(&app).await });
@@ -64,8 +67,8 @@ pub fn create(app: &AppHandle) -> tauri::Result<()> {
             }
         })
         .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, .. } = event {
-                crate::show_main_window(tray.app_handle());
+            if let TrayIconEvent::Click { button: MouseButton::Left, button_state: MouseButtonState::Up, position, .. } = event {
+                crate::tray_panel::toggle(tray.app_handle(), position);
             }
         });
 

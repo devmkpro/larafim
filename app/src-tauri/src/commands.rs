@@ -89,6 +89,12 @@ pub fn open_folder(app: AppHandle, path: PathBuf) -> CmdResult<()> {
 /// Precisa ser `async`: no Windows, criar janela num comando síncrono trava o
 /// WebView (a janela fica em branco).
 #[tauri::command]
+pub async fn open_logs(app: AppHandle, project: Option<String>) {
+    crate::show_logs_window(&app, project.as_deref());
+}
+
+/// Abre as Configurações numa seção (também `async`).
+#[tauri::command]
 pub async fn open_settings(app: AppHandle, section: Option<String>) {
     crate::show_settings_window(&app, section.as_deref().unwrap_or("general"));
 }

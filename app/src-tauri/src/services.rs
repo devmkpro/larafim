@@ -66,7 +66,7 @@ fn own_data_dir(app: &AppHandle, path: &Path, major: &str) -> PathBuf {
     app.state::<AppState>().paths.data_dir().join("mariadb-projetos").join(format!("{name}-{h:016x}-{major}"))
 }
 
-fn own_setup(app: &AppHandle, path: &Path, own: &OwnDb) -> Result<MariaSetup, String> {
+pub(crate) fn own_setup(app: &AppHandle, path: &Path, own: &OwnDb) -> Result<MariaSetup, String> {
     let installed = mariadb::list_installed(&app.state::<AppState>().paths.mariadb_dir());
     let pick = installed
         .iter()
@@ -90,7 +90,7 @@ fn own_service(app: &AppHandle, path: &Path) -> Arc<MariaService> {
         .clone()
 }
 
-fn own_of(cfg: &sentinel_core::ProjectConfig) -> Option<OwnDb> {
+pub(crate) fn own_of(cfg: &sentinel_core::ProjectConfig) -> Option<OwnDb> {
     Some(OwnDb { version: cfg.db_version.clone()?, port: cfg.db_port? })
 }
 
@@ -479,7 +479,7 @@ pub async fn maria_configure(app: AppHandle, version: Option<String>, port: u16)
 
 // ---------- Banco por projeto ----------
 
-fn project_config(app: &AppHandle, path: &Path) -> Result<sentinel_core::ProjectConfig, String> {
+pub(crate) fn project_config(app: &AppHandle, path: &Path) -> Result<sentinel_core::ProjectConfig, String> {
     app.state::<AppState>()
         .projects
         .lock()

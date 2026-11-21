@@ -3,6 +3,8 @@
   import { app } from "./lib/state.svelte";
   import ProjectsWindow from "./main-window/ProjectsWindow.svelte";
   import SettingsWindow from "./settings/SettingsWindow.svelte";
+  import LogsWindow from "./logs/LogsWindow.svelte";
+  import TrayPanel from "./tray/TrayPanel.svelte";
 
   app.load();
 
@@ -23,6 +25,10 @@
 
 {#if windowLabel === "settings"}
   <SettingsWindow />
+{:else if windowLabel === "logs"}
+  <LogsWindow />
+{:else if windowLabel === "tray"}
+  <TrayPanel />
 {:else}
   <ProjectsWindow />
 {/if}

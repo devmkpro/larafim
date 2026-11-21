@@ -43,3 +43,6 @@ export function t(key: string, params?: Params): string {
 export function locale(): string {
   return i18n.lang;
 }
+
+/** Singular/plural pelo número: plural(n, "{n} item", "{n} itens"). */
+export const plural = (n: number, one: string, many: string) => t(n === 1 ? one : many, { n });

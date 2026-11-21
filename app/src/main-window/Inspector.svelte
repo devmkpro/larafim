@@ -8,7 +8,6 @@
   import { nodeApi } from "../lib/node";
   import { terminal } from "../lib/terminal";
   import DbPanel from "./DbPanel.svelte";
-  import LogViewer from "./LogViewer.svelte";
   import WorkersPanel from "./WorkersPanel.svelte";
   import { toolsApi } from "../lib/tools";
   import { s3 } from "../lib/s3";
@@ -35,7 +34,6 @@
   let saving = $state(false);
 
   let nodeMajors = $state<string[]>([]);
-  let showLogs = $state(false);
 
   async function chooseMail(kind: string) {
     if (!project) return;
@@ -236,7 +234,7 @@
           <Glyph name={copied ? "check" : "link"} />
         </button>
         {#if project.status !== "missing"}
-          <button class="btn subtle icon" title={t("Logs do projeto")} onclick={() => (showLogs = true)}>
+          <button class="btn subtle icon" title={t("Logs do projeto")} onclick={() => api.openLogs(project.path)}>
             <Glyph name="logs" />
           </button>
           <button
@@ -529,9 +527,6 @@
   {/if}
 </aside>
 
-{#if showLogs && project}
-  <LogViewer path={project.path} name={project.name} onclose={() => (showLogs = false)} />
-{/if}
 
 <style>
   .inspector {

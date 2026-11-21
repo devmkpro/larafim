@@ -216,7 +216,7 @@ fn project_domain(app: &AppHandle, path: &Path) -> Result<String, String> {
         .ok_or_else(|| t!("importe o projeto antes"))
 }
 
-fn changes(bucket: &str, secret: &str) -> Vec<EnvChange> {
+pub(crate) fn changes(bucket: &str, secret: &str) -> Vec<EnvChange> {
     vec![
         EnvChange::set("FILESYSTEM_DISK", "s3"),
         EnvChange::set("AWS_ACCESS_KEY_ID", S3_ACCESS),
