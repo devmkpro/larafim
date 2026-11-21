@@ -25,10 +25,14 @@ function walk(dir, exts, out = []) {
   return out;
 }
 
-/** Literal JS/Rust ("…" ou '…') → texto. */
-function unquote(q, body) {
-  if (q === '"') return JSON.parse(`"${body}"`);
-  return JSON.parse(`"${body.replace(/\\'/g, "'").replace(/"/g, '\\"')}"`);
+/** Literal JS/Rust ("…" ou '…', sem as aspas) → texto, numa passada só. */
+function unquote(_q, body) {
+  const simple = { n: "\n", r: "\r", t: "\t", 0: "\0", "\\": "\\", '"': '"', "'": "'" };
+  return body.replace(/\\(u\{[0-9a-fA-F]{1,6}\}|u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)/g, (_, e) => {
+    if (e.startsWith("u{")) return String.fromCodePoint(parseInt(e.slice(2, -1), 16));
+    if (e.length > 1) return String.fromCodePoint(parseInt(e.slice(1), 16));
+    return simple[e] ?? e;
+  });
 }
 
 function collectKeys() {
@@ -39,8 +43,11 @@ function collectKeys() {
   const ui = walk(join(root, "app", "src"), [".svelte", ".ts"]).filter((f) => !f.endsWith("i18n.svelte.ts"));
   for (const f of ui) {
     const src = readFileSync(f, "utf8");
-    for (const m of src.matchAll(/\bt\(\s*(["'])((?:\\.|(?!\1).)*)\1/g)) add(unquote(m[1], m[2]), f);
-    for (const m of src.matchAll(/\bplural\([^,]+,\s*"((?:\\.|[^"])*)",\s*"((?:\\.|[^"])*)"/g)) {
+    // `\\.` e o resto nunca casam o mesmo caractere (sem `\` fora do escape):
+    // assim a regex não volta atrás em cadeia (sem risco de ReDoS).
+    for (const m of src.matchAll(/\bt\(\s*"((?:\\.|[^"\\\n])*)"/g)) add(unquote('"', m[1]), f);
+    for (const m of src.matchAll(/\bt\(\s*'((?:\\.|[^'\\\n])*)'/g)) add(unquote("'", m[1]), f);
+    for (const m of src.matchAll(/\bplural\([^,]+,\s*"((?:\\.|[^"\\])*)",\s*"((?:\\.|[^"\\])*)"/g)) {
       add(unquote('"', m[1]), f);
       add(unquote('"', m[2]), f);
     }

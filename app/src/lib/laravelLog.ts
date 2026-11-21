@@ -75,8 +75,9 @@ function parseFrame(n: number, text: string): Frame {
   return { n, file: null, line: null, call: text, vendor: false };
 }
 
-/** No JSON do contexto, as barras do Windows vêm dobradas. */
-const unescape = (s: string) => s.replace(/\\\\/g, "\\").replace(/\\"/g, '"').replace(/\\\//g, "/");
+/** No JSON do contexto, as barras do Windows vêm dobradas. Uma passada só:
+ *  `\\"` vira `\"` (barra + aspa), e não `"` (desfazer duas vezes). */
+const unescape = (s: string) => s.replace(/\\(["\\/])/g, "$1");
 
 function finish(id: number, datetime: string, env: string, levelName: string, lines: string[]): LogEntry {
   const body = lines.join("\n");
