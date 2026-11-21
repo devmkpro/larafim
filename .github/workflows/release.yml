@@ -91,12 +91,48 @@ jobs:
         with:
           subject-path: ${{ steps.files.outputs.installer }}
 
+      # Texto da release: a seção da versão no CHANGELOG.md + como instalar e
+      # conferir o download. A lista de PRs (agrupada por .github/release.yml)
+      # vem logo depois, gerada pelo GitHub.
+      - name: Notas da release
+        id: notes
+        shell: pwsh
+        env:
+          INSTALLER: ${{ steps.files.outputs.installer }}
+        run: |
+          $lines = Get-Content CHANGELOG.md -Encoding utf8
+          $section = @(); $inside = $false
+          foreach ($l in $lines) {
+            if ($l -match '^## ') { $inside = ($l.Trim() -eq "## $env:TAG"); continue }
+            if ($inside) { $section += $l }
+          }
+          if (-not ($section -join '').Trim()) {
+            Write-Error "CHANGELOG.md não tem a seção '## $env:TAG'"
+            exit 1
+          }
+          $exe = Split-Path -Leaf $env:INSTALLER
+          $hash = (Get-FileHash $env:INSTALLER -Algorithm SHA256).Hash.ToLower()
+          $install = @(
+            '', '### Instalar', '',
+            "1. Baixe o **``$exe``** em *Assets*, logo abaixo.",
+            '2. Confira o download (opcional, recomendado):',
+            '   ```powershell',
+            "   Get-FileHash .\$exe -Algorithm SHA256",
+            "   # $hash",
+            "   gh attestation verify .\$exe --repo $env:GITHUB_REPOSITORY",
+            '   ```',
+            '3. Rode o instalador. Ele instala só para o seu usuário, sem administrador.', ''
+          )
+          ($section + $install) -join "`n" | Out-File -Encoding utf8 notes.md
+          "path=$((Resolve-Path notes.md).Path)" >> $env:GITHUB_OUTPUT
+
       - name: Rascunho da release
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ env.TAG }}
           name: Sentinel ${{ env.TAG }}
           draft: true
+          body_path: ${{ steps.notes.outputs.path }}
           generate_release_notes: true
           files: |
             ${{ steps.files.outputs.installer }}

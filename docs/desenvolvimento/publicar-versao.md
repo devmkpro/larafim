@@ -27,21 +27,25 @@ enviada:
 4. gera o `SHA256SUMS.txt`;
 5. cria a **atestação de origem** (*build provenance*) do instalador, que qualquer pessoa confere com
    `gh attestation verify`;
-6. cria um **rascunho** de release com o instalador, o `SHA256SUMS.txt` e notas geradas dos commits.
+6. cria um **rascunho** de release com o instalador, o `SHA256SUMS.txt` e as notas (seção do `CHANGELOG.md` + como instalar + lista de PRs).
 
 ### Passo a passo
 
 1. Atualize a versão em `app/src-tauri/tauri.conf.json`, `app/package.json` e no
    `[workspace.package]` do `Cargo.toml` (as três iguais).
-2. Faça o commit e espere o CI ficar verde.
-3. Crie e envie a tag:
+2. Escreva a seção `## vX.Y.Z` no [`CHANGELOG.md`](../../CHANGELOG.md): destaques, correções e o que
+   a pessoa precisa saber. Esse texto vira o começo da release. O workflow acrescenta "Instalar" (com o
+   SHA-256 do instalador) e a lista de PRs agrupada por categoria
+   ([`.github/release.yml`](../../.github/release.yml)). Sem essa seção, o workflow falha.
+3. Faça o commit e espere o CI ficar verde.
+4. Crie e envie a tag:
 
    ```powershell
    git tag v0.2.0
    git push origin v0.2.0
    ```
 
-4. Quando o workflow terminar, abra a release em rascunho no GitHub, revise as notas e publique.
+5. Quando o workflow terminar, abra a release em rascunho no GitHub, revise as notas e publique.
 
 Dá para recompilar uma tag existente em *Actions › Release › Run workflow*.
 

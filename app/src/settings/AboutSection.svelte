@@ -2,6 +2,7 @@
   import { locale, t } from "../lib/i18n.svelte";
   import { api, onEvent } from "../lib/api";
   import Glyph from "../lib/Glyph.svelte";
+  import Logo from "../lib/Logo.svelte";
   import Toggle from "../lib/Toggle.svelte";
   import { app } from "../lib/state.svelte";
   import { updates, type ProjectLink, type UpdateStatus } from "../lib/updates";
@@ -56,10 +57,7 @@
 </script>
 
 <div class="hero card">
-  <svg class="logo" viewBox="0 0 512 512" aria-hidden="true">
-    <rect x="16" y="16" width="480" height="480" rx="112" fill="var(--accent)" />
-    <path d="M256 104 136 148v84c0 78 51 146 120 172 69-26 120-94 120-172v-84z" fill="none" stroke="var(--accent-fg)" stroke-width="40" stroke-linejoin="round" />
-  </svg>
+  <Logo size={64} />
   <div class="who">
     <strong>Sentinel</strong>
     <span class="caption">{t("Versão {v}", { v: app.info?.version ?? status?.current ?? "" })}</span>
@@ -115,11 +113,6 @@
     align-items: center;
     gap: 20px;
     padding: 20px;
-  }
-  .logo {
-    width: 64px;
-    height: 64px;
-    flex: none;
   }
   .who {
     display: flex;

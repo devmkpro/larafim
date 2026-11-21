@@ -1,0 +1,17 @@
+# Como o GitHub agrupa a lista de PRs nas notas da release.
+changelog:
+  exclude:
+    labels: [ignore-for-release]
+  categories:
+    - title: Novidades
+      labels: [enhancement, feature]
+    - title: Correções
+      labels: [bug, fix]
+    - title: Segurança
+      labels: [security]
+    - title: Documentação
+      labels: [documentation, docs]
+    - title: Dependências
+      labels: [dependencies]
+    - title: Outras mudanças
+      labels: ["*"]

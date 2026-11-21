@@ -3,6 +3,7 @@
   import { getCurrentWindow } from "@tauri-apps/api/window";
   import { inTauri } from "./api";
   import Glyph from "./Glyph.svelte";
+  import Logo from "./Logo.svelte";
 
   let { title }: { title: string } = $props();
   let maximized = $state(false);
@@ -18,10 +19,7 @@
 
 <header class="titlebar" data-tauri-drag-region>
   <div class="title" data-tauri-drag-region>
-    <svg class="logo" viewBox="0 0 512 512" aria-hidden="true">
-      <rect x="16" y="16" width="480" height="480" rx="112" fill="var(--accent)" />
-      <path d="M256 104 136 148v84c0 78 51 146 120 172 69-26 120-94 120-172v-84z" fill="none" stroke="var(--accent-fg)" stroke-width="40" stroke-linejoin="round" />
-    </svg>
+    <Logo size={16} />
     <span data-tauri-drag-region>{title}</span>
   </div>
 
@@ -54,10 +52,6 @@
     font-size: 12px;
     color: var(--text-2);
     flex: 1;
-  }
-  .logo {
-    width: 16px;
-    height: 16px;
   }
   .caption-buttons {
     display: flex;

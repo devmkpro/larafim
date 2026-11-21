@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/assets/logo.svg" width="96" height="96" alt="Sentinel logo">
+
 # Sentinel
 
 **Local PHP, Node and databases for all your projects, on Windows.**
