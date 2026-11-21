@@ -25,7 +25,7 @@ export interface PortOwner {
 }
 
 export interface ServerError {
-  code: "port_busy" | "uac_denied" | "hosts_failed" | "no_php" | "no_node" | "no_command" | "error";
+  code: "port_busy" | "uac_denied" | "hosts_failed" | "no_php" | "no_node" | "no_command" | "db_failed" | "error";
   message: string;
   owner: PortOwner | null;
   suggest: string | null;

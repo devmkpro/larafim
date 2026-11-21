@@ -56,6 +56,9 @@
         node,
         node_command: node ? nodeCommand.trim() : proposal.config.node_command,
         node_version: null,
+        database: null,
+        db_version: null,
+        db_port: null,
         online: false,
       });
       onsaved(data, proposal.config.path);

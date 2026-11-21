@@ -29,6 +29,24 @@ pub struct ProjectConfig {
     /// Major do Node fixado ("22"). Vazio = automático.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub node_version: Option<String>,
+    /// Banco: "mariadb" (compartilhado), "mariadb-own" (servidor próprio do
+    /// projeto), "sqlite" ou "external:<id>". Vazio = não gerenciado.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub database: Option<String>,
+    /// MariaDB próprio: linha ("10.11") e porta.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub db_version: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub db_port: Option<u16>,
+    /// E-mail: "mailpit" (caixa local). Vazio = não gerenciado.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mail: Option<String>,
+    /// Storage: "s3" (S3 local do Sentinel, RustFS). Vazio = não gerenciado.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub storage: Option<String>,
+    /// Workers do Laravel ligados junto com o projeto: "queue", "schedule", "reverb".
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub workers: Vec<String>,
     /// Intenção de deixar online (usado a partir da fase 3).
     #[serde(default)]
     pub online: bool,
@@ -74,6 +92,12 @@ pub struct ProjectView {
     pub node_request: Option<String>,
     /// Major do Node fixado; `None` = automático.
     pub node_pin: Option<String>,
+    pub database: Option<String>,
+    pub db_version: Option<String>,
+    pub db_port: Option<u16>,
+    pub mail: Option<String>,
+    pub storage: Option<String>,
+    pub workers: Vec<String>,
     pub online: bool,
 }
 
@@ -196,6 +220,27 @@ impl ProjectsFile {
         {
             return Err(Error::Invalid(format!("versão do Node inválida: {major}")));
         }
+        if let Some(db) = &cfg.database
+            && db != "mariadb"
+            && db != "mariadb-own"
+            && db != "postgres"
+            && db != "sqlite"
+            && !db.strip_prefix("external:").is_some_and(|id| !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-'))
+        {
+            return Err(Error::Invalid(format!("banco desconhecido: {db}")));
+        }
+        if cfg.database.as_deref() == Some("mariadb-own") && (cfg.db_version.is_none() || cfg.db_port.is_none()) {
+            return Err(Error::Invalid("o MariaDB próprio precisa de versão e porta".into()));
+        }
+        if cfg.mail.as_deref().is_some_and(|m| m != "mailpit") {
+            return Err(Error::Invalid("serviço de e-mail desconhecido".into()));
+        }
+        if cfg.storage.as_deref().is_some_and(|m| m != "s3") {
+            return Err(Error::Invalid("storage desconhecido".into()));
+        }
+        if cfg.workers.iter().any(|w| !["queue", "schedule", "reverb"].contains(&w.as_str())) {
+            return Err(Error::Invalid("worker desconhecido".into()));
+        }
         if cfg.node && cfg.node_command.is_none() {
             return Err(Error::Invalid("informe o comando do Node (ex.: npm run dev)".into()));
         }
@@ -238,6 +283,12 @@ fn default_config(d: &DetectedProject, domain: String) -> ProjectConfig {
         node: d.kind == ProjectKind::Node && d.node_command.is_some(),
         node_command: d.node_command.clone(),
         node_version: None,
+        database: None,
+        db_version: None,
+        db_port: None,
+        mail: None,
+        storage: None,
+        workers: Vec::new(),
         online: false,
     }
 }
@@ -258,6 +309,12 @@ fn view_from(d: &DetectedProject, root: Option<PathBuf>, cfg: &ProjectConfig) ->
         node_command: cfg.node_command.clone().or_else(|| d.node_command.clone()),
         node_request: d.node.clone(),
         node_pin: cfg.node_version.clone(),
+        database: cfg.database.clone(),
+        db_version: cfg.db_version.clone(),
+        db_port: cfg.db_port,
+        mail: cfg.mail.clone(),
+        storage: cfg.storage.clone(),
+        workers: cfg.workers.clone(),
         online: cfg.online,
     }
 }
@@ -278,6 +335,12 @@ fn missing_view(cfg: &ProjectConfig, root: Option<PathBuf>) -> ProjectView {
         node_command: cfg.node_command.clone(),
         node_request: None,
         node_pin: cfg.node_version.clone(),
+        database: cfg.database.clone(),
+        db_version: cfg.db_version.clone(),
+        db_port: cfg.db_port,
+        mail: cfg.mail.clone(),
+        storage: cfg.storage.clone(),
+        workers: cfg.workers.clone(),
         online: false,
     }
 }

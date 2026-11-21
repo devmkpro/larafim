@@ -6,6 +6,11 @@
   import { asServerError, server, type ServerError } from "../lib/server";
   import { nodeApi } from "../lib/node";
   import { terminal } from "../lib/terminal";
+  import DbPanel from "./DbPanel.svelte";
+  import LogViewer from "./LogViewer.svelte";
+  import WorkersPanel from "./WorkersPanel.svelte";
+  import { toolsApi } from "../lib/tools";
+  import { s3 } from "../lib/s3";
   import DevPanel from "./DevPanel.svelte";
   import { app } from "../lib/state.svelte";
   import Toggle from "../lib/Toggle.svelte";
@@ -29,6 +34,69 @@
   let saving = $state(false);
 
   let nodeMajors = $state<string[]>([]);
+  let showLogs = $state(false);
+
+  async function chooseMail(kind: string) {
+    if (!project) return;
+    const p = project;
+    try {
+      if (kind === "mailpit") {
+        const diff = await toolsApi.mailPreview(p.path, kind);
+        const lines = diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? "(comentada)"}`).join("\n");
+        const ok = await confirm(
+          `Usar o Mailpit? Os e-mails do projeto vão para a caixa local (mail.${app.config?.tld}).` +
+            (lines ? `\n\nMudanças no .env (com cópia em .env.sentinel.bak):\n${lines}` : ""),
+          "E-mail do projeto",
+          "Aplicar",
+        );
+        if (!ok) {
+          mailKey++;
+          return;
+        }
+      }
+      await toolsApi.mailApply(p.path, kind);
+    } catch (e) {
+      error = String(e);
+      mailKey++;
+    }
+  }
+  let mailKey = $state(0);
+  let storageKey = $state(0);
+
+  async function chooseStorage(kind: string) {
+    if (!project) return;
+    const p = project;
+    try {
+      if (kind === "s3") {
+        const st = await s3.status();
+        if (!st.installed) {
+          error = "Instale o storage S3 em Configurações › Serviços.";
+          storageKey++;
+          return;
+        }
+        const pv = await s3.preview(p.path);
+        const lines = pv.diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? "(comentada)"}`).join("\n");
+        const pkg = pv.needs_package
+          ? `\n\nO Laravel precisa do pacote do S3. Rode no terminal do projeto:\ncomposer require league/flysystem-aws-s3-v3 "^3.0" --with-all-dependencies`
+          : "";
+        const ok = await confirm(
+          `Usar o storage S3 local? O bucket "${pv.bucket}" será criado.` +
+            (lines ? `\n\nMudanças no .env (com cópia em .env.sentinel.bak):\n${lines}` : "") +
+            pkg,
+          "Storage do projeto",
+          "Aplicar",
+        );
+        if (!ok) {
+          storageKey++;
+          return;
+        }
+      }
+      await s3.apply(p.path, kind);
+    } catch (e) {
+      error = String(e);
+      storageKey++;
+    }
+  }
   $effect(() => {
     void tick;
     nodeApi.installed().then((m) => (nodeMajors = m)).catch(() => {});
@@ -167,6 +235,9 @@
           <Glyph name={copied ? "check" : "link"} />
         </button>
         {#if project.status !== "missing"}
+          <button class="btn subtle icon" title="Logs do projeto" onclick={() => (showLogs = true)}>
+            <Glyph name="logs" />
+          </button>
           <button
             class="btn subtle icon"
             title="Abrir terminal na pasta (php e composer com a versão do projeto)"
@@ -402,19 +473,45 @@
     {#if imported && project.kind !== "node"}
       <div class="section">
         <div class="section-title">Serviços</div>
-        <div class="field">
-          <span>Banco de dados</span>
-          <div class="select"><select disabled><option>Não gerenciado</option></select></div>
-        </div>
+        <DbPanel {project} />
         <div class="field">
           <span>E-mail</span>
-          <div class="select"><select disabled><option>Não gerenciado</option></select></div>
+          {#key mailKey}
+            <div class="select">
+              <select value={project.mail ?? "none"} onchange={(e) => chooseMail(e.currentTarget.value)}>
+                <option value="none">Não gerenciado</option>
+                <option value="mailpit">Mailpit (caixa local)</option>
+              </select>
+            </div>
+          {/key}
         </div>
+        {#if project.mail === "mailpit"}
+          <button class="btn wide" onclick={() => toolsApi.openMailpit().catch((e) => (error = String(e)))}>
+            <Glyph name="mail" /> Abrir caixa de e-mails
+          </button>
+        {/if}
         <div class="field">
           <span>Storage</span>
-          <div class="select"><select disabled><option>Não gerenciado</option></select></div>
+          {#key storageKey}
+            <div class="select">
+              <select value={project.storage ?? "none"} onchange={(e) => chooseStorage(e.currentTarget.value)}>
+                <option value="none">Não gerenciado</option>
+                <option value="s3">S3 local (RustFS)</option>
+              </select>
+            </div>
+          {/key}
         </div>
-        <p class="caption">MariaDB, Mailpit e S3 local entram aqui nas fases 6 a 8.</p>
+        {#if project.storage === "s3"}
+          <button class="btn wide" onclick={() => s3.open().catch((e) => (error = String(e)))}>
+            <Glyph name="openExternal" /> Abrir painel do storage
+          </button>
+        {/if}
+      </div>
+    {/if}
+
+    {#if imported && project.kind === "laravel"}
+      <div class="section">
+        <WorkersPanel {project} />
       </div>
     {/if}
 
@@ -430,6 +527,10 @@
     <div class="none caption">Selecione um projeto para ver os detalhes.</div>
   {/if}
 </aside>
+
+{#if showLogs && project}
+  <LogViewer path={project.path} name={project.name} onclose={() => (showLogs = false)} />
+{/if}
 
 <style>
   .inspector {

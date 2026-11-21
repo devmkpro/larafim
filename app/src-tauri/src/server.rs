@@ -31,6 +31,11 @@ pub struct ServerState {
 }
 
 impl ServerState {
+    /// Reinicia os processos do PHP (ex.: depois de ligar o Xdebug).
+    pub async fn restart_php(&self) {
+        self.pools.stop_all().await;
+    }
+
     pub fn new() -> Self {
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         Self {
@@ -68,9 +73,9 @@ pub struct ServerStatus {
 /// Erro com código para a interface oferecer a ação certa.
 #[derive(Serialize, Debug)]
 pub struct ServerError {
-    /// "port_busy", "uac_denied", "hosts_failed", "no_php", "no_node", "no_command", "error"
-    code: &'static str,
-    message: String,
+    /// "port_busy", "db_failed", "uac_denied", "hosts_failed", "no_php", "no_node", "no_command", "error"
+    pub code: &'static str,
+    pub message: String,
     owner: Option<PortOwner>,
     /// Minor do PHP sugerido para instalar (code = "no_php").
     suggest: Option<String>,
@@ -82,13 +87,13 @@ impl ServerError {
     }
 }
 
-fn views(state: &AppState) -> Vec<ProjectView> {
+pub(crate) fn views(state: &AppState) -> Vec<ProjectView> {
     let roots = state.config.lock().unwrap().roots.clone();
     state.projects.lock().unwrap().views(&roots)
 }
 
 /// Qual PHP instalado um projeto usa agora: (runtime, faltando?).
-fn php_for(view: &ProjectView, installed: &[rphp::InstalledPhp]) -> (Option<PhpRuntime>, bool) {
+pub(crate) fn php_for(view: &ProjectView, installed: &[rphp::InstalledPhp]) -> (Option<PhpRuntime>, bool) {
     if view.kind == ProjectKind::Node {
         return (None, false);
     }
@@ -120,6 +125,54 @@ fn build_routes(app: &AppHandle) -> Routes {
             Site { name: v.name.clone(), docroot: v.path.join(&v.docroot), php, php_missing, online: v.online, proxy },
         );
     }
+    // Caixa de e-mails do Mailpit em mail.<domínio> (proxy para a interface dele).
+    if sentinel_runtimes::tools::mailpit_installed(&state.paths) {
+        let cell = dev
+            .port_cell(crate::tools::MAILPIT_KEY)
+            .unwrap_or_else(|| Arc::new(std::sync::Mutex::new(None)));
+        routes.sites.insert(
+            format!("mail.{tld}"),
+            Site {
+                name: "Mailpit".into(),
+                docroot: state.paths.root().to_path_buf(),
+                php: None,
+                php_missing: false,
+                online: true,
+                proxy: Some(cell),
+            },
+        );
+    }
+    // Painel do storage S3 em s3.<domínio> (porta fixa: a saída do RustFS
+    // mostra também a da API, que não é a do painel).
+    if sentinel_runtimes::s3::rustfs_installed(&state.paths) {
+        routes.sites.insert(
+            format!("s3.{tld}"),
+            Site {
+                name: "Storage S3".into(),
+                docroot: state.paths.root().to_path_buf(),
+                php: None,
+                php_missing: false,
+                online: true,
+                proxy: Some(Arc::new(std::sync::Mutex::new(Some(crate::s3::S3_CONSOLE_PORT)))),
+            },
+        );
+    }
+    // Adminer em db.<domínio>, com o PHP mais novo instalado.
+    if sentinel_runtimes::extras::adminer_installed(&state.paths)
+        && let Some(p) = installed.first()
+    {
+        routes.sites.insert(
+            format!("db.{tld}"),
+            Site {
+                name: "Adminer".into(),
+                docroot: sentinel_runtimes::extras::adminer_dir(&state.paths),
+                php: Some(PhpRuntime { version: p.version.clone(), dir: p.dir.clone() }),
+                php_missing: false,
+                online: true,
+                proxy: None,
+            },
+        );
+    }
     routes
 }
 
@@ -135,6 +188,9 @@ fn wanted_hosts(app: &AppHandle) -> BTreeSet<String> {
         .projects
         .iter()
         .map(|p| format!("{}.{tld}", p.domain))
+        .chain(sentinel_runtimes::extras::adminer_installed(&state.paths).then(|| format!("db.{tld}")))
+        .chain(sentinel_runtimes::tools::mailpit_installed(&state.paths).then(|| format!("mail.{tld}")))
+        .chain(sentinel_runtimes::s3::rustfs_installed(&state.paths).then(|| format!("s3.{tld}")))
         .filter(|h| hosts::valid_host(h))
         .collect()
 }
@@ -169,7 +225,14 @@ pub async fn ensure_hosts(app: &AppHandle) -> Result<(), ServerError> {
 /// online (e na porta configurada), status para a interface e bandeja.
 pub async fn refresh(app: &AppHandle) -> Result<(), ServerError> {
     let routes = build_routes(app);
-    let any_online = routes.sites.values().any(|s| s.online);
+    // O gateway fica ligado se houver projeto online ou o MariaDB ligado (Adminer).
+    let maria_on = app.state::<crate::services::ServicesState>().maria.status().await.running
+        || crate::services::any_own_running(app).await
+        || crate::pg::pg_running(app).await
+        || crate::tools::mailpit_running(app)
+        || crate::s3::s3_running(app);
+    let any_online =
+        routes.sites.iter().any(|(h, s)| s.online && !h.starts_with("db.") && !h.starts_with("mail.") && !h.starts_with("s3.")) || maria_on;
     let server = app.state::<ServerState>();
     *server.routes.write().unwrap() = routes;
 
@@ -252,7 +315,12 @@ pub async fn status(app: &AppHandle) -> ServerStatus {
         port,
         online,
         php_running: server.pools.running().await,
-        node_running: server.dev.all().iter().filter(|d| d.state != sentinel_server::DevState::Exited).count(),
+        node_running: server
+            .dev
+            .all()
+            .iter()
+            .filter(|d| d.state != sentinel_server::DevState::Exited && is_node_key(&d.key))
+            .count(),
         hosts_outdated: server.hosts_outdated.load(std::sync::atomic::Ordering::Relaxed),
     }
 }
@@ -300,11 +368,28 @@ pub async fn set_project_online(app: AppHandle, path: PathBuf, online: bool) -> 
             return Err(e);
         }
         ensure_hosts(&app).await?;
+        if view.database.as_deref() == Some("mariadb") {
+            crate::services::start_maria(&app).await.map_err(|m| ServerError::new("db_failed", m))?;
+        }
+        if view.database.as_deref() == Some("mariadb-own") {
+            crate::services::start_own(&app, &view.path).await.map_err(|m| ServerError::new("db_failed", m))?;
+        }
+        if view.database.as_deref() == Some("postgres") {
+            crate::pg::start_pg(&app).await.map_err(|m| ServerError::new("db_failed", m))?;
+        }
+        if view.storage.as_deref() == Some("s3") {
+            crate::s3::start_s3(&app).await.map_err(|m| ServerError::new("error", m))?;
+        }
+        if view.mail.as_deref() == Some("mailpit") {
+            crate::tools::start_mailpit(&app).await.map_err(|m| ServerError::new("error", m))?;
+        }
         if needs_dev(&view) {
             start_dev(&app, &view)?;
         }
+        crate::tools::start_workers(&app, &view);
     } else {
         app.state::<ServerState>().dev.stop(&dev_key(&path));
+        crate::tools::stop_workers(&app, &path);
     }
 
     set_online_flag(&app, &path, online)?;
@@ -404,11 +489,39 @@ pub fn start(app: &AppHandle) {
         });
 
         forward_dev_events(&app);
+        // Liga o MariaDB se algum projeto online usa ele.
+        let wants_db = views(&app.state::<AppState>()).iter().any(|v| v.online && v.database.as_deref() == Some("mariadb"));
+        if wants_db && let Err(e) = crate::services::start_maria(&app).await {
+            tracing::warn!("MariaDB não iniciou: {e}");
+        }
+        for v in views(&app.state::<AppState>()).into_iter().filter(|v| v.online && v.database.as_deref() == Some("mariadb-own")) {
+            if let Err(e) = crate::services::start_own(&app, &v.path).await {
+                tracing::warn!(project = v.name, "MariaDB próprio não iniciou: {e}");
+            }
+        }
+        if views(&app.state::<AppState>()).iter().any(|v| v.online && v.storage.as_deref() == Some("s3"))
+            && let Err(e) = crate::s3::start_s3(&app).await
+        {
+            tracing::warn!("storage S3 não iniciou: {e}");
+        }
+        if views(&app.state::<AppState>()).iter().any(|v| v.online && v.database.as_deref() == Some("postgres"))
+            && let Err(e) = crate::pg::start_pg(&app).await
+        {
+            tracing::warn!("PostgreSQL não iniciou: {e}");
+        }
         // Religa os servidores do Node dos projetos que estavam online.
         for v in views(&app.state::<AppState>()).into_iter().filter(|v| v.online && needs_dev(v)) {
             if let Err(e) = start_dev(&app, &v) {
                 tracing::warn!(project = v.name, "servidor do Node não iniciou: {}", e.message);
             }
+        }
+        for v in views(&app.state::<AppState>()).into_iter().filter(|v| v.online) {
+            crate::tools::start_workers(&app, &v);
+        }
+        if views(&app.state::<AppState>()).iter().any(|v| v.online && v.mail.as_deref() == Some("mailpit"))
+            && let Err(e) = crate::tools::start_mailpit(&app).await
+        {
+            tracing::warn!("Mailpit não iniciou: {e}");
         }
 
         let any_online = app.state::<AppState>().projects.lock().unwrap().projects.iter().any(|p| p.online);
@@ -430,6 +543,9 @@ pub fn shutdown(app: &AppHandle) {
             g.stop();
         }
         server.pools.stop_all().await;
+        app.state::<crate::services::ServicesState>().maria.stop().await;
+        crate::services::stop_all_own(app).await;
+        app.state::<crate::pg::PgState>().svc.stop().await;
     });
     server.dev.stop_all();
 }
@@ -439,6 +555,11 @@ pub fn shutdown(app: &AppHandle) {
 /// Chave do servidor de dev de um projeto.
 pub fn dev_key(path: &std::path::Path) -> String {
     path.display().to_string().to_lowercase()
+}
+
+/// Só os servidores Node dos projetos (Mailpit, workers e criação de projeto usam chaves próprias).
+fn is_node_key(key: &str) -> bool {
+    !key.contains('|') && !key.starts_with("service:") && !key.starts_with("create:")
 }
 
 /// Projeto Node, ou PHP com "Servidor do Node" ligado (ex.: Laravel + Vite).
@@ -491,11 +612,14 @@ pub struct DevInfo {
     logs: Vec<String>,
 }
 
+pub fn dev_info_for(app: &AppHandle, key: &str) -> DevInfo {
+    let dev = &app.state::<ServerState>().dev;
+    DevInfo { status: dev.status(key), logs: dev.logs(key) }
+}
+
 #[tauri::command]
 pub fn dev_info(app: AppHandle, path: PathBuf) -> DevInfo {
-    let dev = &app.state::<ServerState>().dev;
-    let key = dev_key(&path);
-    DevInfo { status: dev.status(&key), logs: dev.logs(&key) }
+    dev_info_for(&app, &dev_key(&path))
 }
 
 /// Reinicia o servidor do Node de um projeto online.
@@ -529,6 +653,9 @@ fn forward_dev_events(app: &AppHandle) {
                     let _ = app.emit("node:log", DevLog { key, line });
                 }
                 DevEvent::Status(s) => {
+                    if s.state == sentinel_server::DevState::Exited {
+                        crate::tools::on_process_exit(&app, &s.key, s.exit_code);
+                    }
                     let _ = app.emit("node:status", &s);
                     emit_status(&app).await;
                 }

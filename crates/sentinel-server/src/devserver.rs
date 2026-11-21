@@ -132,7 +132,13 @@ impl DevServers {
 
         let path = format!("{};{}", spec.node_dir.display(), std::env::var("PATH").unwrap_or_default());
         let mut cmd = Command::new("cmd.exe");
-        cmd.arg("/D").arg("/S").arg("/C").arg(&spec.command);
+        // Linha de comando passada sem conversão: o Rust escaparia aspas
+        // internas como \" e o cmd.exe não entende isso ("pasta" virava \pasta\").
+        // Com /S, o cmd tira só as aspas de fora e roda o resto como está.
+        #[cfg(windows)]
+        cmd.raw_arg(format!("/D /S /C \"{}\"", spec.command));
+        #[cfg(not(windows))]
+        cmd.arg("-c").arg(&spec.command);
         cmd.current_dir(&spec.cwd)
             .env("PATH", path)
             .env("BROWSER", "none")
@@ -350,6 +356,31 @@ mod job {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Aspas e espaços no comando chegam intactos ao programa.
+    #[tokio::test(flavor = "multi_thread")]
+    async fn quoted_command_arrives_intact() {
+        let servers = DevServers::new(|_| {});
+        let tmp = tempfile::tempdir().unwrap();
+        let dir = tmp.path().join("pasta com espaço");
+        std::fs::create_dir_all(&dir).unwrap();
+        servers
+            .start(DevSpec {
+                key: "q".into(),
+                cwd: tmp.path().to_path_buf(),
+                command: r#"mkdir "pasta com espaço\nova" && echo feito"#.into(),
+                node_dir: tmp.path().to_path_buf(),
+                env: vec![],
+            })
+            .unwrap();
+        for _ in 0..100 {
+            if servers.status("q").is_some_and(|s| s.state == DevState::Exited) {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        }
+        assert!(dir.join("nova").is_dir(), "{:?}", servers.logs("q"));
+    }
 
     #[test]
     fn ports_and_ansi() {

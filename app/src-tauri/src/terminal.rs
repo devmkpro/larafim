@@ -35,6 +35,12 @@ fn same_file(a: &Path, b: &Path) -> bool {
     }
 }
 
+/// Garante os atalhos instalados (usado ao criar projetos e abrir terminal).
+pub fn ensure_shims(app: &AppHandle) -> Result<(), String> {
+    let bin = app.state::<AppState>().paths.bin_dir();
+    install(app, &bin)
+}
+
 /// Copia o atalho como php.exe/composer.exe. `force` = mesmo se iguais.
 fn install(app: &AppHandle, bin: &Path) -> CmdResult<()> {
     let source = shim_source(app).ok_or("o atalho (sentinel-shim.exe) não foi encontrado junto do Sentinel")?;

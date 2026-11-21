@@ -9,7 +9,13 @@ mod node;
 mod php;
 mod projects;
 mod server;
+mod dbconn;
+mod secret;
+mod pg;
+mod s3;
+mod services;
 mod terminal;
+mod tools;
 mod tray;
 
 use std::sync::Mutex;
@@ -60,6 +66,9 @@ pub fn run() {
         .manage(php::PhpState::default())
         .manage(node::NodeState::default())
         .manage(server::ServerState::new())
+        .manage(services::ServicesState::default())
+        .manage(pg::PgState::default())
+        .manage(tools::ToolsState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
             commands::save_config,
@@ -92,6 +101,60 @@ pub fn run() {
             server::fix_hosts,
             server::open_url,
             server::dev_info,
+            services::services_overview,
+            services::maria_install,
+            services::maria_remove,
+            services::maria_start,
+            services::maria_stop,
+            pg::pg_overview,
+            pg::pg_install,
+            pg::pg_remove,
+            pg::pg_start,
+            pg::pg_stop,
+            pg::pg_configure,
+            s3::s3_status,
+            s3::s3_install,
+            s3::s3_start,
+            s3::s3_stop,
+            s3::open_s3,
+            s3::project_storage_preview,
+            s3::project_storage_apply,
+            services::maria_configure,
+            services::project_db_preview,
+            services::project_db_apply,
+            services::project_env_undo,
+            services::project_env_has_backup,
+            services::db_backups,
+            services::db_backup,
+            services::db_restore,
+            services::open_backups_folder,
+            services::open_adminer,
+            tools::mailpit_status,
+            tools::mailpit_install,
+            tools::mailpit_start,
+            tools::mailpit_stop,
+            tools::open_mailpit,
+            tools::project_mail_preview,
+            tools::project_mail_apply,
+            tools::log_files,
+            tools::log_read,
+            tools::log_clear,
+            tools::log_open,
+            tools::worker_set,
+            tools::worker_restart,
+            tools::process_info,
+            tools::has_reverb,
+            tools::xdebug_info,
+            tools::xdebug_set,
+            tools::laravel_create,
+            services::suggest_own_port,
+            services::own_start,
+            services::own_stop,
+            dbconn::db_connections,
+            dbconn::db_connection_test,
+            dbconn::db_connection_save,
+            dbconn::db_connection_remove,
+            dbconn::db_detect,
             server::restart_dev,
             node::node_overview,
             node::node_install,

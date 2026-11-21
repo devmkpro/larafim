@@ -3,8 +3,12 @@
 pub mod download;
 pub mod error;
 pub mod extras;
+pub mod mariadb;
 pub mod node;
 pub mod php;
+pub mod postgres;
+pub mod s3;
+pub mod tools;
 
 pub use error::{Error, Result};
 

@@ -1,0 +1,124 @@
+// Ferramentas: Mailpit, logs, workers do Laravel, Xdebug e projeto Laravel novo.
+import { invoke } from "@tauri-apps/api/core";
+import { inTauri, mockEmit } from "./api";
+import type { DevInfo } from "./node";
+import type { DiffLine } from "./services";
+
+export interface MailpitStatus {
+  installed: boolean;
+  version: string | null;
+  running: boolean;
+  ui_url: string;
+  smtp: string;
+}
+
+export interface LogFile {
+  name: string;
+  size: number;
+  modified: number;
+}
+
+export interface LogChunk {
+  text: string;
+  offset: number;
+  reset: boolean;
+}
+
+export interface XdebugInfo {
+  downloaded: boolean;
+  enabled: boolean;
+  launch_json: string;
+}
+
+export type Worker = "queue" | "schedule" | "reverb";
+export type Kit = "none" | "react" | "vue" | "livewire";
+
+export interface NewLaravel {
+  name: string;
+  root: string;
+  php: string;
+  kit: Kit;
+  database: "sqlite" | "mariadb";
+}
+
+export interface Created {
+  key: string;
+  path: string;
+  ok: boolean;
+  error: string | null;
+}
+
+export const workerKey = (path: string, w: Worker) => `${path.toLowerCase()}|${w}`;
+
+// ---------- Dados de exemplo (navegador) ----------
+let mailRunning = false;
+let xdebugOn = false;
+let mockLog = "[2026-11-20 18:00:01] local.INFO: Pedido 42 criado\n[2026-11-20 18:00:05] local.ERROR: Falha ao enviar e-mail {\"exception\":\"Connection refused\"}\n";
+
+const mock = {
+  mailpitStatus: async (): Promise<MailpitStatus> => ({
+    installed: true,
+    version: "v1.34.0",
+    running: mailRunning,
+    ui_url: "http://mail.offline",
+    smtp: "127.0.0.1:1025",
+  }),
+  mailpitInstall: async () => {},
+  mailpitStart: async () => void ((mailRunning = true), mockEmit("services-changed", null)),
+  mailpitStop: async () => void ((mailRunning = false), mockEmit("services-changed", null)),
+  openMailpit: async () => void window.open("about:blank"),
+  mailPreview: async (_path: string, _kind: string): Promise<DiffLine[]> => [
+    { key: "MAIL_MAILER", before: "log", after: "smtp" },
+    { key: "MAIL_HOST", before: null, after: "127.0.0.1" },
+    { key: "MAIL_PORT", before: null, after: "1025" },
+  ],
+  mailApply: async (_path: string, _kind: string) => {},
+  logFiles: async (_path: string): Promise<LogFile[]> => [{ name: "laravel.log", size: mockLog.length, modified: 1795212000 }],
+  logRead: async (_path: string, _name: string, offset: number | null): Promise<LogChunk> =>
+    offset === null ? { text: mockLog, offset: mockLog.length, reset: true } : { text: "", offset: offset, reset: false },
+  logClear: async (_path: string, _name: string) => void (mockLog = ""),
+  logOpen: async (_path: string, _name: string) => {},
+  workerSet: async (_path: string, _w: Worker, _enabled: boolean) => {},
+  workerRestart: async (_path: string, _w: Worker) => {},
+  processInfo: async (key: string): Promise<DevInfo> => ({
+    status: { key, state: "running", port: null, exit_code: null, command: "php artisan queue:work" },
+    logs: ["INFO  Processing jobs from the [default] queue."],
+  }),
+  hasReverb: async (_path: string) => false,
+  xdebugInfo: async (_v: string): Promise<XdebugInfo> => ({
+    downloaded: xdebugOn,
+    enabled: xdebugOn,
+    launch_json: '{\n  "name": "Sentinel: ouvir Xdebug",\n  "type": "php",\n  "request": "launch",\n  "port": 9003\n}',
+  }),
+  xdebugSet: async (v: string, enabled: boolean) => ((xdebugOn = enabled), mock.xdebugInfo(v)),
+  laravelCreate: async (input: NewLaravel) => {
+    const key = `create:d:\\www\\${input.name}`;
+    const lines = ["Creating a \"laravel/laravel\" project at \"./" + input.name + "\"", "Installing dependencies", "  - Installing laravel/framework (v12.40.1)", "Application key set successfully."];
+    lines.forEach((line, i) => setTimeout(() => mockEmit("node:log", { key, line }), 300 * (i + 1)));
+    setTimeout(() => mockEmit("laravel:created", { key, path: `D:\\www\\${input.name}`, ok: true, error: null }), 1600);
+    return key;
+  },
+};
+
+export const toolsApi = inTauri
+  ? {
+      mailpitStatus: () => invoke<MailpitStatus>("mailpit_status"),
+      mailpitInstall: () => invoke<void>("mailpit_install"),
+      mailpitStart: () => invoke<void>("mailpit_start"),
+      mailpitStop: () => invoke<void>("mailpit_stop"),
+      openMailpit: () => invoke<void>("open_mailpit"),
+      mailPreview: (path: string, kind: string) => invoke<DiffLine[]>("project_mail_preview", { path, kind }),
+      mailApply: (path: string, kind: string) => invoke<void>("project_mail_apply", { path, kind }),
+      logFiles: (path: string) => invoke<LogFile[]>("log_files", { path }),
+      logRead: (path: string, name: string, offset: number | null) => invoke<LogChunk>("log_read", { path, name, offset }),
+      logClear: (path: string, name: string) => invoke<void>("log_clear", { path, name }),
+      logOpen: (path: string, name: string) => invoke<void>("log_open", { path, name }),
+      workerSet: (path: string, worker: Worker, enabled: boolean) => invoke<void>("worker_set", { path, worker, enabled }),
+      workerRestart: (path: string, worker: Worker) => invoke<void>("worker_restart", { path, worker }),
+      processInfo: (key: string) => invoke<DevInfo>("process_info", { key }),
+      hasReverb: (path: string) => invoke<boolean>("has_reverb", { path }),
+      xdebugInfo: (version: string) => invoke<XdebugInfo>("xdebug_info", { version }),
+      xdebugSet: (version: string, enabled: boolean) => invoke<XdebugInfo>("xdebug_set", { version, enabled }),
+      laravelCreate: (input: NewLaravel) => invoke<string>("laravel_create", { input }),
+    }
+  : mock;

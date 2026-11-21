@@ -48,6 +48,14 @@ impl Paths {
         self.runtimes_dir().join("node")
     }
 
+    pub fn mariadb_dir(&self) -> PathBuf {
+        self.runtimes_dir().join("mariadb")
+    }
+
+    pub fn backups_dir(&self) -> PathBuf {
+        self.root.join("backups")
+    }
+
     pub fn data_dir(&self) -> PathBuf {
         self.root.join("data")
     }

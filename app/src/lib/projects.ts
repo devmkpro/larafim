@@ -23,6 +23,13 @@ export interface Project {
   node_request: string | null;
   /** Major do Node fixado; `null` = automático. */
   node_pin: string | null;
+  /** Banco gerenciado: "mariadb", "sqlite" ou null. */
+  database: string | null;
+  db_version: string | null;
+  db_port: number | null;
+  mail: string | null;
+  storage: string | null;
+  workers: string[];
   online: boolean;
 }
 
@@ -35,6 +42,9 @@ export interface ProjectConfig {
   node: boolean;
   node_command: string | null;
   node_version: string | null;
+  database: string | null;
+  db_version: string | null;
+  db_port: number | null;
   online: boolean;
 }
 
@@ -62,6 +72,9 @@ export function toConfig(p: Project): ProjectConfig {
     node: p.node_enabled,
     node_command: p.node_command,
     node_version: p.node_pin,
+    database: p.database,
+    db_version: p.db_version,
+    db_port: p.db_port,
     online: p.online,
   };
 }
@@ -99,6 +112,12 @@ const sample = (
   node_command: node ? "npm run dev" : null,
   node_request: node ? "22" : null,
   node_pin: null,
+  database: null,
+  db_version: null,
+  db_port: null,
+  mail: null,
+  storage: null,
+  workers: [],
   online: false,
 });
 
@@ -183,6 +202,9 @@ const mock = {
       node: false,
       node_command: "npm run dev",
       node_version: null,
+      database: null,
+      db_version: null,
+      db_port: null,
       online: false,
     },
     view_kind: "laravel",

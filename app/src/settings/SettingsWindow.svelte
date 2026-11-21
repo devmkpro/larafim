@@ -8,6 +8,7 @@
   import { projectsApi, type ProjectsOverview } from "../lib/projects";
   import NodeSection from "./NodeSection.svelte";
   import PhpSection from "./PhpSection.svelte";
+  import ServicesSection from "./ServicesSection.svelte";
   import TerminalSection from "./TerminalSection.svelte";
   import SettingRow from "./SettingRow.svelte";
 
@@ -76,13 +77,6 @@
     await app.update({ roots: [...app.config.roots, dir] });
   }
 
-  const services: { name: string; detail: string; phase: number; icon: GlyphName }[] = [
-    { name: "MariaDB", detail: "Banco de dados · porta 3306", phase: 6, icon: "database" },
-    { name: "Adminer", detail: "Gerenciar bancos pelo navegador", phase: 6, icon: "globe" },
-    { name: "Mailpit", detail: "Caixa de e-mails local · SMTP 1025", phase: 7, icon: "mail" },
-    { name: "PostgreSQL", detail: "Download opcional · porta 5432", phase: 8, icon: "database" },
-    { name: "Storage S3 local", detail: "Download opcional · porta 9000", phase: 8, icon: "server" },
-  ];
 </script>
 
 <div class="window">
@@ -104,7 +98,7 @@
     </nav>
 
     <main>
-      {#if section !== "php" && section !== "terminal" && section !== "node"}<h1>{current.label}</h1>{/if}
+      {#if section !== "php" && section !== "terminal" && section !== "node" && section !== "services"}<h1>{current.label}</h1>{/if}
 
       {#if app.error}
         <div class="infobar error"><Glyph name="info" /><span>{app.error}</span></div>
@@ -204,13 +198,7 @@
       {:else if section === "node"}
         <NodeSection />
       {:else if section === "services"}
-        <p class="lead caption">Serviços ficam desligados e só sobem quando algum projeto precisa.</p>
-        {#each services as s (s.name)}
-          <SettingRow icon={s.icon} title={s.name} description={`${s.detail} · fase ${s.phase}`}>
-            <span class="caption">Não instalado</span>
-            <button class="btn" disabled>Instalar</button>
-          </SettingRow>
-        {/each}
+        <ServicesSection />
       {:else if section === "about"}
         <SettingRow icon="shield" title="Sentinel" description={`Versão ${app.info?.version}`} />
         <SettingRow icon="folder" title="Pasta de dados" description={app.info?.data_dir}>

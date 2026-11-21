@@ -14,6 +14,8 @@ export interface AppConfig {
   keep_in_tray: boolean;
   onboarding_done: boolean;
   default_php?: string | null;
+  db_version?: string | null;
+  db_port?: number;
 }
 
 export interface AppInfo {

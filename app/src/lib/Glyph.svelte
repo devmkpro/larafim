@@ -31,6 +31,9 @@
     package: "",
     pin: "",
     check: "",
+    logs: "",
+    bug: "",
+    mailOpen: "",
   } as const;
 
   export type GlyphName = keyof typeof glyphs;

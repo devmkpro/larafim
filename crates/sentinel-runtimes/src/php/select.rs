@@ -154,6 +154,12 @@ mod tests {
             node: false,
             node_command: None,
             node_version: None,
+            database: None,
+            db_version: None,
+            db_port: None,
+            mail: None,
+            storage: None,
+            workers: Vec::new(),
             online: false,
         };
         store.upsert(cfg(&loja, "loja", None)).unwrap();

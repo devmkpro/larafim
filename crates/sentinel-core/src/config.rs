@@ -31,6 +31,61 @@ pub struct AppConfig {
     /// Minor do PHP usado no terminal fora de projetos ("8.4"). Vazio = mais novo instalado.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_php: Option<String>,
+    /// Linha do MariaDB usada ("11.8"). Vazio = mais nova instalada.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub db_version: Option<String>,
+    /// Porta do MariaDB (3306; 3307 se a 3306 já tiver outro banco).
+    pub db_port: u16,
+    /// Major do PostgreSQL usada ("18"). Vazio = mais nova instalada.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pg_version: Option<String>,
+    /// Porta do PostgreSQL (5432; outra se a 5432 já tiver um Postgres).
+    pub pg_port: u16,
+    /// Chave secreta do storage S3 local, protegida com DPAPI (gerada na primeira vez).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub s3_secret: Option<String>,
+    /// Bancos que já existem no PC (MySQL/MariaDB do Laragon, XAMPP…).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub db_connections: Vec<DbConnection>,
+}
+
+/// Conexão com um servidor de banco que não é do Sentinel.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DbConnection {
+    /// Identificador curto (letras, números e hífen).
+    pub id: String,
+    /// Nome para mostrar ("MySQL do Laragon").
+    pub name: String,
+    /// "mysql" ou "mariadb".
+    pub kind: String,
+    pub host: String,
+    pub port: u16,
+    pub user: String,
+    /// Senha protegida pelo Windows (DPAPI), em base64. Vazio = sem senha.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub password_protected: String,
+    /// Pasta com `mysql.exe`/`mysqldump.exe` (ou `mariadb.exe`) desse servidor.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_dir: Option<PathBuf>,
+}
+
+impl DbConnection {
+    pub fn validate(&self) -> Result<()> {
+        let id_ok = !self.id.is_empty() && self.id.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+        if !id_ok {
+            return Err(Error::Invalid("identificador da conexão inválido".into()));
+        }
+        if self.kind != "mysql" && self.kind != "mariadb" {
+            return Err(Error::Invalid("tipo de banco deve ser MySQL ou MariaDB".into()));
+        }
+        if self.name.trim().is_empty() || self.host.trim().is_empty() || self.user.trim().is_empty() {
+            return Err(Error::Invalid("preencha nome, servidor e usuário".into()));
+        }
+        if self.port == 0 {
+            return Err(Error::Invalid("porta inválida".into()));
+        }
+        Ok(())
+    }
 }
 
 impl Default for AppConfig {
@@ -44,6 +99,12 @@ impl Default for AppConfig {
             keep_in_tray: true,
             onboarding_done: false,
             default_php: None,
+            db_version: None,
+            db_port: 3306,
+            pg_version: None,
+            pg_port: 5432,
+            s3_secret: None,
+            db_connections: Vec::new(),
         }
     }
 }

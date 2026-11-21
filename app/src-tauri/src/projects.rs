@@ -89,12 +89,18 @@ pub fn import_all(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Proje
 pub fn save_project(app: AppHandle, state: State<'_, AppState>, config: ProjectConfig) -> CmdResult<ProjectsOverview> {
     // `online` é controlado só pelo interruptor (set_project_online).
     let mut config = config;
-    config.online = state
-        .projects
-        .lock()
-        .map_err(|e| e.to_string())?
-        .find(&config.path)
-        .is_some_and(|p| p.online);
+    // `online` e `database` são controlados pelos próprios comandos.
+    {
+        let store = state.projects.lock().map_err(|e| e.to_string())?;
+        let existing = store.find(&config.path);
+        config.online = existing.is_some_and(|p| p.online);
+        config.database = existing.and_then(|p| p.database.clone());
+        config.db_version = existing.and_then(|p| p.db_version.clone());
+        config.db_port = existing.and_then(|p| p.db_port);
+        config.mail = existing.and_then(|p| p.mail.clone());
+        config.storage = existing.and_then(|p| p.storage.clone());
+        config.workers = existing.map(|p| p.workers.clone()).unwrap_or_default();
+    }
     let data = change(&app, &state, |store, _| store.upsert(config))?;
     crate::server::after_change(&app, true);
     Ok(data)
@@ -155,6 +161,12 @@ pub fn inspect_folder(state: State<'_, AppState>, path: PathBuf) -> CmdResult<Fo
             node: d.kind == sentinel_core::ProjectKind::Node && d.node_command.is_some(),
             node_command: d.node_command.clone(),
             node_version: None,
+            database: None,
+            db_version: None,
+            db_port: None,
+            mail: None,
+            storage: None,
+            workers: Vec::new(),
             online: false,
         },
         view_kind: d.kind,

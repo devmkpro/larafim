@@ -8,6 +8,7 @@
   import { app } from "../lib/state.svelte";
   import TitleBar from "../lib/TitleBar.svelte";
   import AddProjectDialog from "./AddProjectDialog.svelte";
+  import NewLaravelDialog from "./NewLaravelDialog.svelte";
   import Inspector from "./Inspector.svelte";
 
   let projects = $state<Project[]>([]);
@@ -19,6 +20,7 @@
   /** Muda quando um PHP é instalado/removido, para o painel recalcular a versão. */
   let phpVersionTick = $state(0);
   let status = $state<ServerStatus | null>(null);
+  let creating = $state(false);
   /** Diálogo de adicionar/revisar projeto. */
   let proposal = $state<FolderProposal | null>(null);
 
@@ -156,6 +158,10 @@
     <button class="btn subtle" onclick={addRoot}>
       <Glyph name="folder" />
       Adicionar pasta
+    </button>
+    <button class="btn subtle" onclick={() => (creating = true)}>
+      <Glyph name="package" />
+      Novo Laravel
     </button>
 
     <div class="grow" data-tauri-drag-region></div>
@@ -325,6 +331,17 @@
     <span>Sentinel {app.info?.version}</span>
   </footer>
 </div>
+
+{#if creating}
+  <NewLaravelDialog
+    onclose={() => (creating = false)}
+    ondone={async (path) => {
+      creating = false;
+      await scan();
+      selectedPath = projects.find((p) => p.path.toLowerCase() === path.toLowerCase())?.path ?? selectedPath;
+    }}
+  />
+{/if}
 
 {#if proposal}
   <AddProjectDialog

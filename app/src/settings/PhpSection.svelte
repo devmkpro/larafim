@@ -13,6 +13,7 @@
     type PhpStage,
   } from "../lib/php";
   import ProgressBar from "../lib/ProgressBar.svelte";
+  import { toolsApi, type XdebugInfo } from "../lib/tools";
   import Toggle from "../lib/Toggle.svelte";
   import SettingRow from "./SettingRow.svelte";
 
@@ -83,10 +84,30 @@
     }
   }
 
+  let xdebug = $state<XdebugInfo | null>(null);
+  let xdebugBusy = $state(false);
+  let xdebugError = $state<string | null>(null);
+  let copied = $state(false);
+
   async function openDetail(version: string) {
     detail = version;
     extFilter = "";
+    xdebugError = null;
     extensions = await php.extensions(version);
+    xdebug = await toolsApi.xdebugInfo(version).catch(() => null);
+  }
+
+  async function setXdebug(enabled: boolean) {
+    if (!detail) return;
+    xdebugBusy = true;
+    xdebugError = null;
+    try {
+      xdebug = await toolsApi.xdebugSet(detail, enabled);
+    } catch (e) {
+      xdebugError = String(e);
+    } finally {
+      xdebugBusy = false;
+    }
   }
 
   async function toggleExt(name: string, enabled: boolean) {
@@ -114,6 +135,36 @@
       <Glyph name="search" size={14} />
       <input class="input" placeholder="Filtrar extensões" bind:value={extFilter} />
     </label>
+  </div>
+
+  <div class="xdebug card">
+    <div class="xd-head">
+      <Glyph name="bug" size={18} />
+      <div class="xd-text">
+        <strong>Xdebug</strong>
+        <span class="caption">
+          {xdebugBusy ? "Baixando e configurando…" : xdebug?.enabled ? "Ligado · porta 9003 · ativa quando a IDE pede (trigger)" : "Desligado (deixa o PHP mais rápido)"}
+        </span>
+      </div>
+      <Toggle label="Xdebug" checked={xdebug?.enabled ?? false} disabled={xdebugBusy} onchange={setXdebug} />
+    </div>
+    {#if xdebug?.enabled}
+      <p class="caption">
+        No VS Code (extensão PHP Debug), use este <span class="mono">launch.json</span> e inicie a depuração. No navegador,
+        use a extensão "Xdebug helper" para ligar por página.
+      </p>
+      <div class="code">
+        <pre>{xdebug.launch_json}</pre>
+        <button
+          class="btn subtle icon"
+          title={copied ? "Copiado!" : "Copiar"}
+          onclick={() => navigator.clipboard.writeText(xdebug!.launch_json).then(() => ((copied = true), setTimeout(() => (copied = false), 1500)))}
+        >
+          <Glyph name={copied ? "check" : "copy"} />
+        </button>
+      </div>
+    {/if}
+    {#if xdebugError}<p class="caption xd-err">{xdebugError}</p>{/if}
   </div>
 
   {#if extSaved}
@@ -407,6 +458,46 @@
   }
   .ext-list {
     overflow: hidden;
+  }
+  .xdebug {
+    padding: 12px 16px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .xd-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .xd-text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .xdebug p {
+    margin: 0;
+  }
+  .code {
+    position: relative;
+  }
+  .code pre {
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: var(--r-ctrl);
+    background: var(--layer);
+    border: 1px solid var(--stroke);
+    font: 12px/18px var(--mono);
+    user-select: text;
+  }
+  .code .btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+  .xd-err {
+    color: var(--err);
   }
   .ext {
     display: flex;

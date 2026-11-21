@@ -3636,6 +3636,7 @@ dependencies = [
 name = "sentinel-app"
 version = "0.1.0"
 dependencies = [
+ "base64 0.23.1",
  "semver",
  "sentinel-core",
  "sentinel-runtimes",
