@@ -29,12 +29,14 @@ fn installer_choice() -> Option<String> {
     i18n::is_supported(&code).then_some(code)
 }
 
+/// Idioma da interface do Windows (não o formato regional: dá para ter o
+/// Windows em português com datas e números no formato en-US).
 #[cfg(windows)]
 fn system_locale() -> Option<String> {
-    use windows_sys::Win32::Globalization::GetUserDefaultLocaleName;
+    use windows_sys::Win32::Globalization::{GetUserDefaultUILanguage, LCIDToLocaleName};
     let mut buf = [0u16; 85];
-    // SAFETY: buffer com o tamanho máximo de um nome de localidade.
-    let n = unsafe { GetUserDefaultLocaleName(buf.as_mut_ptr(), buf.len() as i32) };
+    // SAFETY: LANGID do idioma da interface; buffer com o tamanho máximo de um nome de localidade.
+    let n = unsafe { LCIDToLocaleName(u32::from(GetUserDefaultUILanguage()), buf.as_mut_ptr(), buf.len() as i32, 0) };
     (n > 1).then(|| String::from_utf16_lossy(&buf[..(n - 1) as usize]))
 }
 
