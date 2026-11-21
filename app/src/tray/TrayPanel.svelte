@@ -7,6 +7,7 @@
   import { php, type PhpRow } from "../lib/php";
   import { server, type ServerStatus } from "../lib/server";
   import { toolsApi, type MailpitStatus } from "../lib/tools";
+  import { updates, type UpdateStatus } from "../lib/updates";
 
   // Painel da bandeja (clique esquerdo no ícone): atalhos do dia a dia.
 
@@ -18,7 +19,10 @@
 
   document.documentElement.classList.add("panel-window");
 
+  let update = $state<UpdateStatus | null>(null);
+
   async function load() {
+    updates.status().then((u) => (update = u)).catch(() => {});
     const [s, m, p] = await Promise.all([
       server.status().catch(() => null),
       toolsApi.mailpitStatus().catch(() => null),
@@ -35,6 +39,7 @@
       onEvent("tray:shown", () => ((error = null), load())),
       onEvent<ServerStatus>("server-status", (s) => (status = s)),
       onEvent("services-changed", load),
+      onEvent<UpdateStatus>("app:update", (u) => (update = u)),
     ];
     return () => stops.forEach((s) => s());
   });
@@ -71,6 +76,9 @@
     run: () => Promise<unknown>;
   }
   const groups = $derived<Item[][]>([
+    ...(update?.available && update.latest
+      ? [[{ icon: "refresh" as GlyphName, label: t("Atualizar o Sentinel"), hint: update.latest, run: () => updates.openLink("update") }]]
+      : []),
     [
       { icon: "apps", label: t("Abrir Sentinel"), run: backend("main") },
       { icon: "add", label: t("Novo projeto Laravel"), run: backend("new-laravel") },

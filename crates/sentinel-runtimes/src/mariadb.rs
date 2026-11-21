@@ -54,6 +54,8 @@ pub fn parse_majors(json: &str) -> Result<Vec<(String, Option<String>)>> {
         .iter()
         .filter(|r| r["release_status"] == "Stable" && r["release_support_type"] == "Long Term Support")
         .filter_map(|r| Some((r["release_id"].as_str()?.to_string(), r["release_eol_date"].as_str().map(String::from))))
+        // O número da linha entra em URL e em nome de pasta: só "11.8", "12.3"…
+        .filter(|(major, _)| major.split('.').all(|p| !p.is_empty() && p.bytes().all(|c| c.is_ascii_digit())) && major.len() <= 8)
         .collect())
 }
 
@@ -64,13 +66,18 @@ pub fn parse_release(json: &str, major: &str, eol: Option<String>) -> Result<Mar
     let mut versions: Vec<&String> = releases.keys().collect();
     versions.sort_by_key(|k| std::cmp::Reverse(version_key(k)));
     for version in versions {
+        // A versão vira nome de pasta (e a pasta antiga é apagada ao reinstalar):
+        // nada de "../" vindo do catálogo.
+        if !sentinel_core::safety::is_safe_component(version) || !version.starts_with(major) {
+            continue;
+        }
         let files = releases[version]["files"].as_array();
         let zip = files.into_iter().flatten().find(|f| {
             f["file_name"].as_str().is_some_and(|n| n == format!("mariadb-{version}-winx64.zip"))
         });
         if let Some(f) = zip {
             let sha = f["checksum"]["sha256sum"].as_str().unwrap_or_default().to_lowercase();
-            if sha.len() != 64 {
+            if !sentinel_core::safety::is_sha256(&sha) {
                 continue;
             }
             let file = format!("mariadb-{version}-winx64.zip");
@@ -137,13 +144,7 @@ pub async fn install(
     {
         let (zip_path, tmp) = (zip_path.clone(), tmp.clone());
         tokio::task::spawn_blocking(move || -> Result<()> {
-            if tmp.exists() {
-                std::fs::remove_dir_all(&tmp).map_err(|e| Error::io(&tmp, e))?;
-            }
-            let f = std::fs::File::open(&zip_path).map_err(|e| Error::io(&zip_path, e))?;
-            zip::ZipArchive::new(f)
-                .and_then(|mut a| a.extract(&tmp))
-                .map_err(|e| Error::Zip(e.to_string()))
+            crate::archive::extract_zip(&zip_path, &tmp, crate::archive::Limits::default())
         })
         .await
         .map_err(|e| Error::Zip(e.to_string()))??;
@@ -206,6 +207,28 @@ mod tests {
         assert_eq!(e.version, "11.8.9");
         assert_eq!(e.sha256, "c".repeat(64));
         assert!(e.url.ends_with("/11.8.9/mariadb-11.8.9-winx64.zip"));
+    }
+
+    /// Catálogo adulterado: versões que viram "../" no caminho e linhas
+    /// estranhas são ignoradas; só sobra a entrada legítima.
+    #[test]
+    fn tampered_catalog_is_ignored() {
+        let majors = r#"{"major_releases":[
+          {"release_id":"../../Windows","release_status":"Stable","release_support_type":"Long Term Support"},
+          {"release_id":"11.8","release_status":"Stable","release_support_type":"Long Term Support"}]}"#;
+        let m = parse_majors(majors).unwrap();
+        assert_eq!(m.iter().map(|x| x.0.as_str()).collect::<Vec<_>>(), ["11.8"]);
+
+        let sha = "a".repeat(64);
+        let release = format!(
+            r#"{{"releases":{{
+              "11.8.99/../../../evil":{{"files":[{{"file_name":"mariadb-11.8.99/../../../evil-winx64.zip","checksum":{{"sha256sum":"{sha}"}}}}]}},
+              "11.8.98":{{"files":[{{"file_name":"mariadb-11.8.98-winx64.zip","checksum":{{"sha256sum":"not-a-sha"}}}}]}},
+              "11.8.9":{{"files":[{{"file_name":"mariadb-11.8.9-winx64.zip","checksum":{{"sha256sum":"{sha}"}}}}]}}}}}}"#
+        );
+        let e = parse_release(&release, "11.8", None).unwrap();
+        assert_eq!(e.version, "11.8.9");
+        assert!(e.url.starts_with(API));
     }
 
     #[tokio::test(flavor = "multi_thread")]

@@ -33,7 +33,7 @@ fn hint_for(name: &str, pid: u32) -> Option<String> {
     } else {
         return None;
     };
-    Some(hint.into())
+    Some(hint)
 }
 
 /// Processo escutando na porta (IPv4), se houver.

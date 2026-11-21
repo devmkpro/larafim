@@ -3,7 +3,7 @@
 use sentinel_core::t;
 
 fn escape(s: &str) -> String {
-    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;")
+    s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;").replace('"', "&quot;").replace('\'', "&#39;")
 }
 
 fn page(title: &str, message: &str, extra: &str) -> String {
@@ -113,5 +113,26 @@ mod tests {
         assert!(super::offline("loja").contains("The project <strong>loja</strong> is off."));
         sentinel_core::i18n::set_language("pt-BR");
         assert!(super::unknown_site("x.offline", &[]).contains("Projeto não encontrado"));
+    }
+
+    /// Tudo que vem da requisição (domínio, caminho) ou do PHP (mensagem de
+    /// erro) aparece escapado: nada vira HTML/JS na página do Sentinel.
+    #[test]
+    fn request_data_is_escaped() {
+        let evil = r#"<script>alert('x')</script>"><img src=x onerror=alert(1)>"#;
+        for html in [
+            super::unknown_site(evil, &[]),
+            super::not_found(evil),
+            super::php_error(evil),
+            super::offline(evil),
+            super::no_php(evil),
+            super::node_starting(evil),
+            super::proxy_error(3000, evil),
+        ] {
+            assert!(!html.contains("<script>alert"), "{html}");
+            assert!(!html.contains("<img src=x"), "{html}");
+            assert!(!html.contains("'x'"), "{html}");
+            assert!(html.contains("&lt;script&gt;"), "{html}");
+        }
     }
 }

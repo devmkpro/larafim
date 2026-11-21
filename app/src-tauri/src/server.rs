@@ -499,15 +499,7 @@ pub async fn fix_hosts(app: AppHandle) -> Result<ServerStatus, ServerError> {
 pub fn open_url(app: AppHandle, url: String) -> Result<(), String> {
     // Só endereços do Sentinel: domínio local (http/https) ou localhost.
     let tld = app.state::<AppState>().config.lock().unwrap().tld.clone();
-    let host = url
-        .strip_prefix("http://")
-        .or_else(|| url.strip_prefix("https://"))
-        .and_then(|r| r.split(['/', '?', '#']).next())
-        .map(|h| h.split(':').next().unwrap_or_default().to_lowercase())
-        .unwrap_or_default();
-    let allowed = host.ends_with(&format!(".{tld}"))
-        || (url.starts_with("http://") && (host == "localhost" || host == "127.0.0.1"));
-    if !allowed {
+    if !sentinel_core::safety::is_local_url(&url, &tld) {
         return Err(t!("endereço inválido"));
     }
     app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())

@@ -1,0 +1,92 @@
+# Checagens de cada push e pull request: tipos, traduções, clippy, testes
+# e auditoria de dependências. O app é só para Windows, então roda no Windows.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: Testes (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Dependências da interface
+        working-directory: app
+        run: npm ci
+
+      - name: Traduções completas
+        run: node scripts/i18n.mjs check --strict
+
+      - name: Tipos da interface
+        working-directory: app
+        run: npm run check
+
+      # O app embute a interface compilada e o sentinel-shim.exe: os dois
+      # precisam existir antes de compilar o Rust.
+      - name: Interface compila
+        working-directory: app
+        run: npm run build
+
+      - name: sentinel-shim (release)
+        run: cargo build -p sentinel-shim --release --locked
+
+      - name: Clippy (sem avisos)
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Testes do Rust (inclui os de segurança)
+        run: cargo test --workspace --locked
+
+  audit:
+    name: Auditoria de dependências
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Instalar cargo-audit
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Vulnerabilidades conhecidas (Rust)
+        run: cargo audit
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Vulnerabilidades conhecidas (npm)
+        working-directory: app
+        run: npm audit --audit-level=high

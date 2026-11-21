@@ -8,6 +8,30 @@ use tokio::io::AsyncWriteExt;
 
 use crate::error::{Error, Result};
 
+/// Fontes oficiais de onde o Sentinel baixa algo. Um catálogo adulterado
+/// não consegue apontar o download para outro servidor.
+pub const TRUSTED_HOSTS: &[&str] = &[
+    "downloads.php.net",
+    "windows.php.net",
+    "nodejs.org",
+    "downloads.mariadb.org",
+    "github.com",
+    "getcomposer.org",
+    "curl.se",
+    "xdebug.org",
+];
+
+/// Antes de baixar: só `https://` de uma fonte oficial e com um SHA-256 de verdade.
+pub fn check_source(url: &str, sha256: &str) -> Result<()> {
+    if !sentinel_core::safety::is_https_url_on(url, TRUSTED_HOSTS) {
+        return Err(Error::Invalid(sentinel_core::t!("download recusado: {url} não é uma fonte oficial", url = url)));
+    }
+    if !sentinel_core::safety::is_sha256(sha256.trim()) {
+        return Err(Error::Invalid(sentinel_core::t!("download recusado: SHA-256 inválido para {url}", url = url)));
+    }
+    Ok(())
+}
+
 /// Baixa `url` para `dest`. Grava primeiro em `dest.part` e só renomeia
 /// depois de conferir o SHA-256 — um arquivo pela metade nunca vira "pronto".
 /// `on_progress(recebido, total)` é chamado a cada pedaço recebido.
@@ -19,6 +43,7 @@ pub async fn download_verified(
     cancel: &AtomicBool,
     on_progress: &(dyn Fn(u64, Option<u64>) + Send + Sync),
 ) -> Result<()> {
+    check_source(url, sha256)?;
     let mut resp = client.get(url).send().await.map_err(Error::Http)?;
     if !resp.status().is_success() {
         return Err(Error::HttpStatus { status: resp.status().as_u16(), url: url.into() });
@@ -96,6 +121,42 @@ pub fn sha256_file(path: &Path) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_official_sources() {
+        let sha = "a".repeat(64);
+        for ok in [
+            "https://downloads.php.net/~windows/releases/php-8.4.28-nts-Win32-vs17-x64.zip",
+            "https://github.com/axllent/mailpit/releases/download/v1.34.0/mailpit-windows-amd64.zip",
+            "https://nodejs.org/dist/v22.11.0/node-v22.11.0-win-x64.zip",
+        ] {
+            assert!(check_source(ok, &sha).is_ok(), "{ok}");
+        }
+        for bad in [
+            "http://downloads.php.net/php.zip",
+            "https://evil.example/php.zip",
+            "https://github.com.evil.example/x.zip",
+            "https://github.com@evil.example/x.zip",
+            "file:///C:/x.zip",
+        ] {
+            assert!(check_source(bad, &sha).is_err(), "{bad}");
+        }
+        assert!(check_source("https://github.com/x.zip", "").is_err());
+        assert!(check_source("https://github.com/x.zip", "naoehash").is_err());
+    }
+
+    /// Mesmo com URL boa, o arquivo só fica se o SHA-256 bater (sem rede:
+    /// a recusa acontece antes de qualquer conexão).
+    #[tokio::test]
+    async fn refuses_before_connecting() {
+        let tmp = tempfile::tempdir().unwrap();
+        let client = reqwest::Client::new();
+        let never = AtomicBool::new(false);
+        let dest = tmp.path().join("x.zip");
+        let r = download_verified(&client, "https://evil.example/x.zip", &"a".repeat(64), &dest, &never, &|_, _| {}).await;
+        assert!(r.is_err());
+        assert!(!dest.exists());
+    }
 
     #[test]
     fn sha256_of_known_content() {

@@ -16,6 +16,22 @@ pub enum Target {
     NotFound,
 }
 
+/// Nomes que o Windows trata de um jeito especial e que serviriam para
+/// driblar as regras acima:
+/// - `info.php.` / `info.php ` (ponto ou espaço no fim): o Windows abre
+///   `info.php`, mas a extensão some — o código seria entregue como texto;
+/// - `ENV~1` (nome curto 8.3): alcança `.env` e outros arquivos ocultos;
+/// - `x:stream` (fluxo alternativo do NTFS), `\`, caracteres de controle e
+///   os proibidos em nomes (`<>"|?*`);
+/// - nomes de dispositivo (`CON`, `NUL`, `COM1`…).
+fn windows_trick(seg: &str) -> bool {
+    let short_name = seg.char_indices().any(|(i, c)| c == '~' && seg[i + 1..].starts_with(|n: char| n.is_ascii_digit()));
+    seg.ends_with(['.', ' '])
+        || short_name
+        || seg.chars().any(|c| c.is_control() || "\\:<>\"|?*".contains(c))
+        || sentinel_core::safety::is_reserved_windows_name(seg)
+}
+
 /// `url_path` é o caminho da URL sem a query string.
 pub fn resolve(docroot: &Path, url_path: &str, php: bool) -> Target {
     let decoded = percent_encoding::percent_decode_str(url_path).decode_utf8_lossy();
@@ -26,7 +42,7 @@ pub fn resolve(docroot: &Path, url_path: &str, php: bool) -> Target {
         }
         // Nada de subir pastas, caminhos do Windows ou arquivos ocultos.
         let hidden = seg.starts_with('.') && seg != ".well-known";
-        if seg == ".." || seg.contains(['\\', ':', '\0']) || hidden {
+        if seg == ".." || hidden || windows_trick(seg) {
             return Target::Forbidden;
         }
         segments.push(seg.to_string());
@@ -127,5 +143,36 @@ mod tests {
         assert_eq!(resolve(root, "/info.php", false), Target::Forbidden, "sem PHP, não entrega o código");
         assert_eq!(resolve(root, "/.well-known/x.txt", true), Target::Static(root.join(".well-known").join("x.txt")));
         assert_eq!(resolve(root, "/nada", false), Target::NotFound);
+    }
+
+    /// Truques de nome do Windows que levariam ao código PHP ou ao `.env`.
+    #[test]
+    fn windows_name_tricks() {
+        let s = site();
+        let root = s.path();
+        for url in [
+            "/info.php.",            // o Windows abre info.php, mas sem a extensão .php
+            "/info.php%20",          // idem, com espaço
+            "/info.php%2e",          // ponto codificado
+            "/info.php::$DATA",      // fluxo do NTFS
+            "/info.php%3A%3A$DATA",
+            "/ENV~1",                // nome curto de .env
+            "/env~1",
+            "/admin~1/index.php",
+            "/CON",
+            "/aux.txt",
+            "/css/nul",
+            "/x%00.png",             // byte nulo
+            "/a%0Ab",                // quebra de linha
+            "/*.php",
+            "/in<fo>.php",
+            "/%22quoted%22",
+            "/a%7Cb",
+        ] {
+            assert_eq!(resolve(root, url, true), Target::Forbidden, "{url}");
+        }
+        // Nome com til que não é nome curto continua valendo.
+        fs::write(root.join("versao~beta.txt"), "").unwrap();
+        assert_eq!(resolve(root, "/versao~beta.txt", true), Target::Static(root.join("versao~beta.txt")));
     }
 }

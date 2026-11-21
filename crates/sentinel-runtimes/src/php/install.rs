@@ -117,16 +117,7 @@ pub fn remove_minor(paths: &Paths, minor: &str) -> Result<usize> {
 }
 
 fn extract(zip_path: &Path, dest: &Path) -> Result<()> {
-    if dest.exists() {
-        std::fs::remove_dir_all(dest).map_err(|e| Error::io(dest, e))?;
-    }
-    let file = std::fs::File::open(zip_path).map_err(|e| Error::io(zip_path, e))?;
-    let mut archive = zip::ZipArchive::new(file).map_err(|e| Error::Zip(e.to_string()))?;
-    // `extract` recusa caminhos que saem da pasta de destino.
-    archive.extract(dest).map_err(|e| {
-        let _ = std::fs::remove_dir_all(dest);
-        Error::Zip(e.to_string())
-    })
+    crate::archive::extract_zip(zip_path, dest, crate::archive::Limits::default())
 }
 
 /// Mantém só a build atual e a anterior de cada minor (para poder voltar).

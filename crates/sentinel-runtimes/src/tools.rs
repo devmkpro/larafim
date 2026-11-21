@@ -42,6 +42,10 @@ pub fn parse_mailpit_release(json: &str) -> Result<(String, String, String)> {
     if !url.starts_with("https://github.com/axllent/mailpit/") || sha.len() != 64 {
         return Err(Error::Catalog(t!("dados do Mailpit incompletos (sem SHA-256)")));
     }
+    // A versão vira nome de arquivo e aparece na tela: só caracteres simples.
+    if !sentinel_core::safety::is_safe_component(&tag) {
+        return Err(Error::Catalog(t!("versão do Mailpit inválida no catálogo")));
+    }
     Ok((tag, url, sha))
 }
 

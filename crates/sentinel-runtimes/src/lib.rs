@@ -1,5 +1,7 @@
 //! Runtimes gerenciados pelo Sentinel. Fase 1: PHP (+ Composer e certificados).
 
+pub mod app_update;
+pub mod archive;
 pub mod download;
 pub mod error;
 pub mod extras;

@@ -7,6 +7,7 @@ pub mod i18n;
 pub mod logging;
 pub mod paths;
 pub mod projects;
+pub mod safety;
 pub mod store;
 
 pub use config::{AppConfig, DbConnection, Theme};

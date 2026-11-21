@@ -1,0 +1,37 @@
+name: Problema
+description: Algo não funciona como deveria
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Falha de segurança? **Não abra uma issue pública**: veja o SECURITY.md.
+  - type: textarea
+    id: what
+    attributes:
+      label: O que aconteceu
+      description: E o que você esperava que acontecesse.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Como reproduzir
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Versão do Sentinel e do Windows
+      placeholder: "Sentinel 0.1.0, Windows 11 24H2"
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log
+      description: Trecho de %LOCALAPPDATA%\Sentinel\logs. Confira se não há caminhos ou nomes que você prefira não publicar.
+      render: text

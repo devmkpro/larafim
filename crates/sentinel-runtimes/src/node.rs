@@ -228,12 +228,7 @@ pub async fn install(
     {
         let (zip_path, tmp) = (zip_path.clone(), tmp.clone());
         tokio::task::spawn_blocking(move || -> Result<()> {
-            if tmp.exists() {
-                std::fs::remove_dir_all(&tmp).map_err(|e| Error::io(&tmp, e))?;
-            }
-            let f = std::fs::File::open(&zip_path).map_err(|e| Error::io(&zip_path, e))?;
-            let mut archive = zip::ZipArchive::new(f).map_err(|e| Error::Zip(e.to_string()))?;
-            archive.extract(&tmp).map_err(|e| Error::Zip(e.to_string()))
+            crate::archive::extract_zip(&zip_path, &tmp, crate::archive::Limits::default())
         })
         .await
         .map_err(|e| Error::Zip(e.to_string()))??;

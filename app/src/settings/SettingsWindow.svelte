@@ -10,6 +10,8 @@
   import NodeSection from "./NodeSection.svelte";
   import PhpSection from "./PhpSection.svelte";
   import ServicesSection from "./ServicesSection.svelte";
+  import AboutSection from "./AboutSection.svelte";
+  import { updates } from "../lib/updates";
   import TerminalSection from "./TerminalSection.svelte";
   import HttpsSettings from "./HttpsSettings.svelte";
   import SettingRow from "./SettingRow.svelte";
@@ -31,6 +33,13 @@
     "general";
   let section = $state<SettingsSection>(["general", "folders", "network", "php", "terminal", "node", "services", "about"].includes(initial) ? (initial as SettingsSection) : "general");
   onEvent<SettingsSection>("settings:navigate", (s) => (section = s));
+
+  // Versão nova do Sentinel: bolinha no item "Sobre".
+  let updateAvailable = $state(false);
+  $effect(() => {
+    updates.status().then((s) => (updateAvailable = s.available)).catch(() => {});
+    return onEvent<{ available: boolean }>("app:update", (s) => (updateAvailable = s.available));
+  });
 
   const current = $derived(nav.find((n) => n.id === section)!);
 
@@ -95,6 +104,7 @@
         >
           <Glyph name={item.icon} />
           {item.label}
+          {#if item.id === "about" && updateAvailable}<span class="update-dot" title={t("Atualização disponível")}></span>{/if}
         </button>
       {/each}
     </nav>
@@ -214,10 +224,7 @@
       {:else if section === "services"}
         <ServicesSection />
       {:else if section === "about"}
-        <SettingRow icon="shield" title="Sentinel" description={t("Versão {v}", { v: app.info?.version ?? "" })} />
-        <SettingRow icon="folder" title={t("Pasta de dados")} description={app.info?.data_dir}>
-          <button class="btn" onclick={() => api.openDataDir()}>{t("Abrir")}</button>
-        </SettingRow>
+        <AboutSection />
       {/if}
     </main>
   </div>
@@ -301,6 +308,13 @@
   }
   .actions {
     margin-top: 8px;
+  }
+  .update-dot {
+    width: 8px;
+    height: 8px;
+    margin-left: auto;
+    border-radius: 50%;
+    background: var(--accent);
   }
   .subhead {
     margin: 28px 0 8px;

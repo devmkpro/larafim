@@ -22,6 +22,7 @@ mod terminal;
 mod tools;
 mod tray;
 mod tray_panel;
+mod updates;
 
 use std::sync::Mutex;
 
@@ -85,6 +86,7 @@ pub fn run() {
         .manage(services::ServicesState::default())
         .manage(pg::PgState::default())
         .manage(tools::ToolsState::default())
+        .manage(updates::UpdateState::default())
         .invoke_handler(tauri::generate_handler![
             commands::get_config,
             service_info::service_info,
@@ -95,6 +97,9 @@ pub fn run() {
             commands::open_settings,
             commands::open_logs,
             tray_panel::tray_fit,
+            updates::app_update_status,
+            updates::app_update_check,
+            updates::open_project_link,
             tray_panel::tray_action,
             projects::list_projects,
             projects::import_project,
@@ -195,6 +200,7 @@ pub fn run() {
         .setup(|app| {
             tray::create(app.handle())?;
             php::start_update_checker(app.handle().clone());
+            updates::start_checker(app.handle().clone());
             server::start(app.handle());
             terminal::refresh_on_start(app.handle());
             let autostart = app.state::<AppState>().config.lock().map(|c| c.start_with_windows).unwrap_or(false);

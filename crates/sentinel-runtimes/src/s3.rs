@@ -41,6 +41,10 @@ pub fn parse_rustfs_release(json: &str) -> Result<(String, String, String)> {
     if !url.starts_with(URL_PREFIX) || sha.len() != 64 || !sha.bytes().all(|c| c.is_ascii_hexdigit()) {
         return Err(Error::Catalog(t!("dados do RustFS incompletos (sem SHA-256)")));
     }
+    // A versão vira nome de arquivo e aparece na tela: só caracteres simples.
+    if !sentinel_core::safety::is_safe_component(&tag) {
+        return Err(Error::Catalog(t!("versão do RustFS inválida no catálogo")));
+    }
     Ok((tag, url, sha))
 }
 

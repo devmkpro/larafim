@@ -21,21 +21,21 @@ const URL_PREFIX: &str = "url:";
 
 fn build_menu(app: &AppHandle, online: &[OnlineSite]) -> tauri::Result<Menu<Wry>> {
     let menu = Menu::new(app)?;
-    menu.append(&MenuItem::with_id(app, OPEN, &t!("Abrir Sentinel"), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, OPEN, t!("Abrir Sentinel"), true, None::<&str>)?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     if online.is_empty() {
-        menu.append(&MenuItem::with_id(app, "none", &t!("Nenhum projeto online"), false, None::<&str>)?)?;
+        menu.append(&MenuItem::with_id(app, "none", t!("Nenhum projeto online"), false, None::<&str>)?)?;
     } else {
         for site in online {
             let label = site.url.trim_start_matches("http://").trim_start_matches("https://");
             menu.append(&MenuItem::with_id(app, format!("{URL_PREFIX}{}", site.url), label, true, None::<&str>)?)?;
         }
-        menu.append(&MenuItem::with_id(app, STOP_ALL, &t!("Desligar todos os projetos"), true, None::<&str>)?)?;
+        menu.append(&MenuItem::with_id(app, STOP_ALL, t!("Desligar todos os projetos"), true, None::<&str>)?)?;
     }
     menu.append(&PredefinedMenuItem::separator(app)?)?;
-    menu.append(&MenuItem::with_id(app, LOGS, &t!("Visualizador de logs"), true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, SETTINGS, &t!("Configurações…"), true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, QUIT, &t!("Sair do Sentinel"), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, LOGS, t!("Visualizador de logs"), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, SETTINGS, t!("Configurações…"), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, QUIT, t!("Sair do Sentinel"), true, None::<&str>)?)?;
     Ok(menu)
 }
 
@@ -85,10 +85,30 @@ pub fn update_online(app: &AppHandle, online: &[OnlineSite]) {
     if let Ok(menu) = build_menu(app, online) {
         let _ = tray.set_menu(Some(menu));
     }
-    let tip = match online.len() {
+    *ONLINE.lock().unwrap() = online.len();
+    refresh_tooltip(app);
+}
+
+/// Quantos projetos estão online e se há versão nova (para a dica do ícone).
+static ONLINE: std::sync::Mutex<usize> = std::sync::Mutex::new(0);
+static UPDATE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+
+fn refresh_tooltip(app: &AppHandle) {
+    let Some(tray) = app.tray_by_id(TRAY_ID) else { return };
+    let mut tip = match *ONLINE.lock().unwrap() {
         0 => "Sentinel".to_string(),
         1 => t!("Sentinel — 1 projeto online"),
         n => t!("Sentinel — {n} projetos online", n = n),
     };
+    if let Some(v) = UPDATE.lock().unwrap().as_deref() {
+        tip.push('\n');
+        tip.push_str(&t!("Versão {v} disponível", v = v));
+    }
     let _ = tray.set_tooltip(Some(tip));
+}
+
+/// Mostra na dica do ícone que há versão nova.
+pub fn update_tooltip_for_update(app: &AppHandle, status: &crate::updates::UpdateStatus) {
+    *UPDATE.lock().unwrap() = status.available.then(|| status.latest.clone()).flatten();
+    refresh_tooltip(app);
 }

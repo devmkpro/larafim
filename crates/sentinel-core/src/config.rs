@@ -33,6 +33,8 @@ pub struct AppConfig {
     pub start_with_windows: bool,
     /// Ao fechar a janela, o Sentinel continua na bandeja.
     pub keep_in_tray: bool,
+    /// Procura versões novas do Sentinel no GitHub (ao abrir e a cada 6 horas).
+    pub check_updates: bool,
     pub onboarding_done: bool,
     /// Minor do PHP usado no terminal fora de projetos ("8.4"). Vazio = mais novo instalado.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -106,6 +108,7 @@ impl Default for AppConfig {
             roots: Vec::new(),
             start_with_windows: false,
             keep_in_tray: true,
+            check_updates: true,
             onboarding_done: false,
             default_php: None,
             db_version: None,

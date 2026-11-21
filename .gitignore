@@ -1,1 +1,16 @@
+# Compilação
 /target
+
+# Segredos e certificados: nunca vão para o repositório
+.env
+.env.*
+*.pfx
+*.p12
+*.key
+*.pem
+
+# Lixo do sistema e de editores
+*.log
+Thumbs.db
+.DS_Store
+.idea/

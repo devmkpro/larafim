@@ -1,50 +1,102 @@
+<div align="center">
+
 # Sentinel
 
-Gerenciador local de PHP, Node e serviços para Windows, em Rust + Tauri 2 + Svelte 5.
-Planejamento completo em [`../docs/PLANO.md`](../docs/PLANO.md).
+**PHP, Node e bancos de dados locais para todos os seus projetos, no Windows.**
 
-## Estrutura
+Cada projeto no seu endereço (`https://loja.offline`), cada um com a sua versão de PHP,
+ao mesmo tempo, sem baixar nem configurar nada à mão.
 
-```
-crates/sentinel-core/     caminhos, config.toml, projects.toml, detecção de projetos, logs
-crates/sentinel-runtimes/ PHP: catálogo oficial, download, php.ini, extensões, Composer
-crates/sentinel-server/   gateway HTTP, FastCGI, pools de php-cgi, hosts, portas
-app/                    interface Svelte 5 + Vite
-app/src-tauri/          app desktop (janela, bandeja, comandos)
-```
+[![CI](https://github.com/josevictoremiliano/sentinel/actions/workflows/ci.yml/badge.svg)](https://github.com/josevictoremiliano/sentinel/actions/workflows/ci.yml)
+[![Licença: MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-blue.svg)](LICENSE)
+![Windows 10/11](https://img.shields.io/badge/Windows-10%20%7C%2011-0078d4)
 
-## Requisitos
+[Baixar](https://github.com/josevictoremiliano/sentinel/releases/latest) ·
+[Documentação](docs/README.md) ·
+[Segurança](SECURITY.md) ·
+[English](README.en.md)
 
-- Rust (toolchain MSVC) e Visual Studio Build Tools
-- Node.js 20+
-- WebView2 (já vem no Windows 11)
+</div>
 
-## Comandos
+---
+
+## O que é
+
+O Sentinel é um app de bandeja, leve e nativo do Windows 11, que monta o ambiente de
+desenvolvimento local para projetos **PHP, Laravel e Node**, na linha do Laravel Herd e do
+Laragon:
+
+- **Várias versões de PHP ao mesmo tempo.** O projeto A roda em 8.3 e o B em 8.5, lado a lado.
+  O Sentinel baixa as versões oficiais, confere o SHA-256 e avisa quando há atualização.
+- **Um endereço por projeto.** `http://loja.offline` (ou `https://`, com certificado local), sem
+  Apache nem Nginx: um servidor próprio em Rust encaminha cada domínio para o PHP ou para o
+  servidor de desenvolvimento do Node.
+- **Serviços sob demanda.** MariaDB, PostgreSQL, Mailpit (caixa de e-mails local), storage S3
+  (RustFS) e Adminer. Ficam desligados e só sobem quando um projeto precisa.
+- **`.env` sem medo.** Ao ligar um serviço num projeto, o Sentinel mostra o que vai mudar no `.env`,
+  guarda uma cópia e permite desfazer.
+- **Terminal certo.** `php` e `composer` usam, em qualquer terminal, a versão do projeto da pasta
+  atual.
+- **Ferramentas do dia a dia.** Visualizador de logs do Laravel com o stack trace organizado, Xdebug
+  com um clique, workers (fila, agendador, Reverb) e novo projeto Laravel.
+- **Leve.** Na bandeja, o Sentinel ocupa cerca de 10 MB de memória.
+
+Interface em português e inglês. Mais idiomas são fáceis de acrescentar
+([como](docs/desenvolvimento/traducoes.md)).
+
+## Instalação
+
+1. Baixe o `Sentinel_x.y.z_x64-setup.exe` na [página de releases](https://github.com/josevictoremiliano/sentinel/releases/latest).
+2. Confira se o arquivo é o original: veja o [guia de instalação](docs/guia/instalacao.md#conferir-o-download).
+3. Rode o instalador. Ele instala só para o seu usuário, sem pedir administrador, e pergunta o idioma.
+
+O instalador ainda não tem assinatura digital, então o Windows pode mostrar o aviso do SmartScreen
+("O Windows protegeu o computador"). Em *Mais informações › Executar assim mesmo* a instalação
+continua.
+
+Requisitos: Windows 10 ou 11 (x64) com o WebView2, que já vem no Windows 11.
+
+## Primeiros passos
+
+1. Na primeira abertura, escolha a pasta onde ficam seus projetos (ex.: `D:\www`).
+2. Instale uma versão do PHP em *Configurações › PHP*.
+3. Importe os projetos encontrados e ligue um deles: ele abre em `http://<nome>.offline`.
+
+O primeiro projeto ligado pede permissão de administrador (UAC) uma única vez, para registrar os
+domínios no arquivo `hosts`. O guia completo está em [Primeiros passos](docs/guia/primeiros-passos.md).
+
+## Documentação
+
+| | |
+|---|---|
+| **Usar o Sentinel** | [Instalação](docs/guia/instalacao.md) · [Primeiros passos](docs/guia/primeiros-passos.md) · [Projetos](docs/guia/projetos.md) · [PHP e Node](docs/guia/php-e-node.md) · [Serviços e bancos](docs/guia/servicos.md) · [Ferramentas](docs/guia/ferramentas.md) · [HTTPS e domínios](docs/guia/https-e-dominios.md) · [Terminal](docs/guia/terminal.md) · [Problemas comuns](docs/guia/problemas-comuns.md) |
+| **Desenvolver** | [Arquitetura](docs/desenvolvimento/arquitetura.md) · [Compilar e testar](docs/desenvolvimento/compilar-e-testar.md) · [Traduções](docs/desenvolvimento/traducoes.md) · [Publicar uma versão](docs/desenvolvimento/publicar-versao.md) |
+| **Segurança** | [Modelo de segurança e proteções](docs/seguranca.md) · [Como reportar uma falha](SECURITY.md) |
+
+Índice completo em [docs/README.md](docs/README.md).
+
+## Contribuir
+
+Contribuições são bem-vindas: leia o [guia de contribuição](CONTRIBUTING.md). Agentes de IA (Claude
+Code, Codex, Copilot…) devem seguir o [AGENTS.md](AGENTS.md).
+
+Para compilar:
 
 ```powershell
 cd app
-npm install
-npm run tauri dev        # app com recarga automática
-npm run dev              # só a interface no navegador (dados de exemplo)
-npm run check            # checagem de tipos do Svelte
-npx tauri build --no-bundle   # executável em target\release\sentinel-app.exe
+npm ci
+npm run tauri dev
 ```
 
-```powershell
-cargo test --workspace   # testes do Rust (na raiz do workspace)
-```
+Detalhes, requisitos e testes em [Compilar e testar](docs/desenvolvimento/compilar-e-testar.md).
 
-## Dados
+## Plataformas
 
-Tudo fica em `%LOCALAPPDATA%\Sentinel` (configuração, runtimes, logs). Para testar
-sem mexer nos seus dados, defina outra pasta: `$env:SENTINEL_HOME = "C:\temp\sentinel-teste"`.
-Nível de log: `$env:SENTINEL_LOG = "debug"`.
+O Sentinel é **só para Windows** por enquanto. Ele depende de partes do Windows, como o arquivo
+`hosts` com UAC, a proteção de senhas (DPAPI), o registro e os Job Objects, e baixa as versões de
+Windows do PHP, do MariaDB e do PostgreSQL. Versões para macOS e Linux não estão descartadas, mas
+exigem portar essas partes. Veja a [arquitetura](docs/desenvolvimento/arquitetura.md#outras-plataformas).
 
-Só para testes automáticos: `$env:SENTINEL_SKIP_HOSTS = "1"` faz o Sentinel não mexer no arquivo `hosts` (sem UAC). Os projetos respondem no gateway, mas o navegador não acha o domínio `.offline`; acesse com `curl -H "Host: projeto.offline" http://127.0.0.1/`.
+## Licença
 
-Teste de ponta a ponta com PHP de verdade:
-
-```powershell
-$env:SENTINEL_TEST_PHP = "$env:LOCALAPPDATA\Sentinel\runtimes\php\8.4.28"
-cargo test -p sentinel-server --test e2e_php -- --ignored
-```
+[MIT](LICENSE).

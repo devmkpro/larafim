@@ -1,6 +1,7 @@
 <script lang="ts">
   import { plural, t } from "../lib/i18n.svelte";
   import { api, kindLabel, onEvent, projectUrl } from "../lib/api";
+  import { updates, type UpdateStatus } from "../lib/updates";
   import { pickFolder } from "../lib/folders";
   import Glyph from "../lib/Glyph.svelte";
   import { php } from "../lib/php";
@@ -21,6 +22,27 @@
   /** Muda quando um PHP é instalado/removido, para o painel recalcular a versão. */
   let phpVersionTick = $state(0);
   let status = $state<ServerStatus | null>(null);
+  // Versão nova do Sentinel: barra no topo até a pessoa dispensar aquela versão.
+  let update = $state<UpdateStatus | null>(null);
+  let dismissedUpdate = $state<string | null>(null);
+  try {
+    dismissedUpdate = localStorage.getItem("sentinel:update-dismissed");
+  } catch {
+    // sem armazenamento: só não lembra a escolha
+  }
+  function dismissUpdate() {
+    dismissedUpdate = update?.latest ?? null;
+    try {
+      if (dismissedUpdate) localStorage.setItem("sentinel:update-dismissed", dismissedUpdate);
+    } catch {
+      // idem
+    }
+  }
+  $effect(() => {
+    updates.status().then((s) => (update = s)).catch(() => {});
+    return onEvent<UpdateStatus>("app:update", (s) => (update = s));
+  });
+
   // Aberta pelo painel da bandeja em "Novo projeto Laravel": já começa no diálogo.
   let creating = $state(!!(window as { __SENTINEL_NEW_LARAVEL__?: boolean }).__SENTINEL_NEW_LARAVEL__);
   /** Diálogo de adicionar/revisar projeto. */
@@ -204,6 +226,16 @@
       <Glyph name="info" />
       <span>{app.error.charAt(0).toUpperCase() + app.error.slice(1)}</span>
       <button class="btn subtle" onclick={() => (app.error = null)}>{t("Fechar")}</button>
+    </div>
+  {/if}
+
+  {#if update?.available && update.latest && dismissedUpdate !== update.latest}
+    <div class="newbar updatebar">
+      <Glyph name="refresh" />
+      <span>{t("Versão {v} do Sentinel disponível.", { v: update.latest })}</span>
+      <button class="btn accent" onclick={() => updates.openLink("update")}>{t("Baixar")}</button>
+      <button class="btn subtle" onclick={() => api.openSettings("about")}>{t("Detalhes")}</button>
+      <button class="btn subtle icon" title={t("Lembrar depois")} onclick={dismissUpdate}><Glyph name="close" size={12} /></button>
     </div>
   {/if}
 
@@ -468,6 +500,9 @@
     border: 1px solid var(--stroke);
     background: var(--accent-soft);
     flex: none;
+  }
+  .updatebar {
+    margin: 10px 12px 0;
   }
   .newbar span {
     flex: 1;

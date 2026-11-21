@@ -15,6 +15,7 @@ export interface AppConfig {
   roots: string[];
   start_with_windows: boolean;
   keep_in_tray: boolean;
+  check_updates: boolean;
   onboarding_done: boolean;
   default_php?: string | null;
   db_version?: string | null;
@@ -50,6 +51,7 @@ export let mockConfig: AppConfig = {
   roots: ["D:\\www"],
   start_with_windows: false,
   keep_in_tray: true,
+  check_updates: true,
   onboarding_done: false,
 };
 
