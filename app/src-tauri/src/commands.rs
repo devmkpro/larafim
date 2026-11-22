@@ -1,10 +1,10 @@
 //! Comandos chamados pela interface (`invoke`). Erros voltam como texto
 //! legível para mostrar na tela.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::path::PathBuf;
 
-use sentinel_core::AppConfig;
+use larafim_core::AppConfig;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_opener::OpenerExt;
@@ -29,9 +29,9 @@ pub fn save_config(app: AppHandle, state: State<'_, AppState>, config: AppConfig
         (c.start_with_windows, c.language.clone())
     };
     if let Some(lang) = config.language.as_deref()
-        && !sentinel_core::i18n::is_supported(lang)
+        && !larafim_core::i18n::is_supported(lang)
     {
-        return Err(sentinel_core::t!("idioma não suportado: {lang}", lang = lang));
+        return Err(larafim_core::t!("idioma não suportado: {lang}", lang = lang));
     }
     if was != config.start_with_windows {
         crate::autostart::set(config.start_with_windows)?;
@@ -44,7 +44,7 @@ pub fn save_config(app: AppHandle, state: State<'_, AppState>, config: AppConfig
         crate::server::after_change(&app, previous.tld != config.tld);
     }
     if old_language != config.language {
-        crate::language_changed(&app, config.language.as_deref().unwrap_or(sentinel_core::i18n::SOURCE));
+        crate::language_changed(&app, config.language.as_deref().unwrap_or(larafim_core::i18n::SOURCE));
     }
     tracing::info!("configuração salva");
     let _ = app.emit("config-changed", &config);

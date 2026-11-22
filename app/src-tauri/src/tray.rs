@@ -6,12 +6,12 @@ use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
 };
-use sentinel_core::t;
+use larafim_core::t;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::server::OnlineSite;
 
-const TRAY_ID: &str = "sentinel";
+const TRAY_ID: &str = "larafim";
 const OPEN: &str = "open";
 const SETTINGS: &str = "settings";
 const LOGS: &str = "logs";
@@ -21,7 +21,7 @@ const URL_PREFIX: &str = "url:";
 
 fn build_menu(app: &AppHandle, online: &[OnlineSite]) -> tauri::Result<Menu<Wry>> {
     let menu = Menu::new(app)?;
-    menu.append(&MenuItem::with_id(app, OPEN, t!("Abrir Sentinel"), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, OPEN, t!("Abrir Larafim"), true, None::<&str>)?)?;
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     if online.is_empty() {
         menu.append(&MenuItem::with_id(app, "none", t!("Nenhum projeto online"), false, None::<&str>)?)?;
@@ -35,14 +35,14 @@ fn build_menu(app: &AppHandle, online: &[OnlineSite]) -> tauri::Result<Menu<Wry>
     menu.append(&PredefinedMenuItem::separator(app)?)?;
     menu.append(&MenuItem::with_id(app, LOGS, t!("Visualizador de logs"), true, None::<&str>)?)?;
     menu.append(&MenuItem::with_id(app, SETTINGS, t!("Configurações…"), true, None::<&str>)?)?;
-    menu.append(&MenuItem::with_id(app, QUIT, t!("Sair do Sentinel"), true, None::<&str>)?)?;
+    menu.append(&MenuItem::with_id(app, QUIT, t!("Sair do Larafim"), true, None::<&str>)?)?;
     Ok(menu)
 }
 
 pub fn create(app: &AppHandle) -> tauri::Result<()> {
     let menu = build_menu(app, &[])?;
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
-        .tooltip("Sentinel")
+        .tooltip("Larafim")
         .menu(&menu)
         .show_menu_on_left_click(false)
         .on_menu_event(|app, event| {
@@ -96,9 +96,9 @@ static UPDATE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 fn refresh_tooltip(app: &AppHandle) {
     let Some(tray) = app.tray_by_id(TRAY_ID) else { return };
     let mut tip = match *ONLINE.lock().unwrap() {
-        0 => "Sentinel".to_string(),
-        1 => t!("Sentinel — 1 projeto online"),
-        n => t!("Sentinel — {n} projetos online", n = n),
+        0 => "Larafim".to_string(),
+        1 => t!("Larafim — 1 projeto online"),
+        n => t!("Larafim — {n} projetos online", n = n),
     };
     if let Some(v) = UPDATE.lock().unwrap().as_deref() {
         tip.push('\n');

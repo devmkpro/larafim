@@ -30,7 +30,7 @@ A chave de cada texto é **o próprio texto em português** (estilo gettext):
    parâmetros diferentes.
 
 Nada mais precisa ser registrado: o Rust inclui todos os JSON no build
-(`crates/sentinel-core/build.rs`), a interface carrega todos sozinha, e o
+(`crates/larafim-core/build.rs`), a interface carrega todos sozinha, e o
 build do instalador roda `node scripts/i18n.mjs sync`, que atualiza a lista
 de idiomas do NSIS e o gancho que grava a escolha.
 
@@ -39,5 +39,5 @@ de idiomas do NSIS e o gancho que grava a escolha.
 - Interface: `t("Texto")`, `t("Texto {x}", { x })`; plural com
   `plural(n, "{n} item", "{n} itens")`.
 - Rust: `t!("Texto")`, `t!("Texto {x}", x = valor)`; em `#[error(...)]`,
-  `sentinel_core::i18n::tf("Texto {0}", &[("0", &.0 as &dyn Display)])`.
+  `larafim_core::i18n::tf("Texto {0}", &[("0", &.0 as &dyn Display)])`.
 - Logs (`tracing`) ficam em português: são para quem desenvolve.

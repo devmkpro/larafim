@@ -18,7 +18,7 @@ npm run tauri dev            # app completo com recarga automática
 npm run dev                  # só a interface no navegador, com dados de exemplo
 npm run check                # checagem de tipos do Svelte/TypeScript
 npx tauri build              # instalador em target\release\bundle\nsis\
-npx tauri build --no-bundle  # só o executável: target\release\sentinel-app.exe
+npx tauri build --no-bundle  # só o executável: target\release\larafim-app.exe
 ```
 
 Na raiz:
@@ -31,17 +31,17 @@ node scripts/i18n.mjs check                                   # traduções
 
 Antes do primeiro `cargo test`/`cargo clippy`, o app precisa de duas coisas que o Tauri embute na
 compilação: a interface compilada (`npm run build` em `app/`) e o
-`cargo build -p sentinel-shim --release`. O `npm run tauri dev`/`build` já faz isso sozinho.
+`cargo build -p larafim-shim --release`. O `npm run tauri dev`/`build` já faz isso sozinho.
 
 ## Variáveis de ambiente
 
 | Variável | Para quê |
 |---|---|
-| `SENTINEL_HOME` | Pasta de dados alternativa (ex.: `C:\temp\sentinel-teste`), para testar sem mexer nos seus dados |
-| `SENTINEL_LOG` | Nível de log (`info`, `debug`, `trace`) |
-| `SENTINEL_SKIP_HOSTS` | `1` = não mexe no arquivo `hosts` (sem UAC). Só para testes automáticos: o navegador não acha os domínios; use `curl -H "Host: projeto.offline" http://127.0.0.1/` |
-| `SENTINEL_PHP` / `SENTINEL_NODE` | Força a versão usada pelos atalhos do terminal |
-| `SENTINEL_SHIM_DEBUG` | `1` = o atalho explica qual versão escolheu e por quê |
+| `LARAFIM_HOME` | Pasta de dados alternativa (ex.: `C:\temp\larafim-teste`), para testar sem mexer nos seus dados |
+| `LARAFIM_LOG` | Nível de log (`info`, `debug`, `trace`) |
+| `LARAFIM_SKIP_HOSTS` | `1` = não mexe no arquivo `hosts` (sem UAC). Só para testes automáticos: o navegador não acha os domínios; use `curl -H "Host: projeto.offline" http://127.0.0.1/` |
+| `LARAFIM_PHP` / `LARAFIM_NODE` | Força a versão usada pelos atalhos do terminal |
+| `LARAFIM_SHIM_DEBUG` | `1` = o atalho explica qual versão escolheu e por quê |
 
 ## Testes
 
@@ -57,11 +57,11 @@ Os testes marcados `#[ignore]` precisam de rede ou de runtimes de verdade:
 cargo test --workspace -- --ignored real_
 
 # PHP de ponta a ponta: gateway + FastCGI + php-cgi de verdade
-$env:SENTINEL_TEST_PHP = "$env:LOCALAPPDATA\Sentinel\runtimes\php\8.4.28"
-cargo test -p sentinel-server --test e2e_php -- --ignored
+$env:LARAFIM_TEST_PHP = "$env:LOCALAPPDATA\Larafim\runtimes\php\8.4.28"
+cargo test -p larafim-server --test e2e_php -- --ignored
 ```
 
-`SENTINEL_TEST_MARIADB` e `SENTINEL_TEST_POSTGRES` apontam para instalações reais nos testes ignorados
+`LARAFIM_TEST_MARIADB` e `LARAFIM_TEST_POSTGRES` apontam para instalações reais nos testes ignorados
 dos bancos.
 
 ## Antes de abrir um pull request

@@ -1,6 +1,6 @@
-# Documentação do Sentinel
+# Documentação do Larafim
 
-## Usar o Sentinel
+## Usar o Larafim
 
 | Guia | Conteúdo |
 |---|---|
@@ -25,7 +25,7 @@
 
 ## Segurança
 
-- [Modelo de segurança](seguranca.md): o que o Sentinel protege, como e quais testes cobrem cada ponto.
+- [Modelo de segurança](seguranca.md): o que o Larafim protege, como e quais testes cobrem cada ponto.
 - [Reportar uma falha](../SECURITY.md).
 
 ## Histórico

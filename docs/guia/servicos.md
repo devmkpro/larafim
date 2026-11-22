@@ -23,7 +23,7 @@ O banco padrão para projetos PHP/Laravel, compatível com MySQL (`pdo_mysql`, `
   ligado).
 - **Acesso:** `127.0.0.1`, porta 3306 por padrão (use 3307 se já houver outro banco na 3306), usuário
   `root`, sem senha.
-- **Dados:** `%LOCALAPPDATA%\Sentinel\data\mariadb\<linha>`. Remover uma versão não apaga os dados.
+- **Dados:** `%LOCALAPPDATA%\Larafim\data\mariadb\<linha>`. Remover uma versão não apaga os dados.
 
 ### MariaDB próprio do projeto
 
@@ -38,26 +38,26 @@ Download opcional (~50 MB), com builds do projeto
 SHA-256 da release.
 
 - **Acesso:** `127.0.0.1:5432`, usuário `postgres`, sem senha.
-- Ao usar num projeto, o Sentinel liga as extensões `pgsql`/`pdo_pgsql` no PHP do projeto.
+- Ao usar num projeto, o Larafim liga as extensões `pgsql`/`pdo_pgsql` no PHP do projeto.
 
 ## Bancos que você já tem
 
 Um MySQL ou MariaDB que já roda no PC (Laragon, XAMPP, serviço do Windows) pode ser usado nos
-projetos sem instalar outro. O Sentinel **detecta** servidores nas portas 3306 a 3310 e oferece
+projetos sem instalar outro. O Larafim **detecta** servidores nas portas 3306 a 3310 e oferece
 "Usar este".
 
 - A senha é guardada protegida pelo Windows (DPAPI): só o seu usuário, neste PC, consegue lê-la.
-- O Sentinel **não liga nem desliga** esse servidor. Ele só cria bancos, ajusta o `.env` e faz backups.
+- O Larafim **não liga nem desliga** esse servidor. Ele só cria bancos, ajusta o `.env` e faz backups.
 
 ## Banco do projeto e o `.env`
 
 No painel do projeto, em **Serviços › Banco de dados**, escolha SQLite, MariaDB, MariaDB próprio,
-PostgreSQL ou uma conexão existente. O Sentinel:
+PostgreSQL ou uma conexão existente. O Larafim:
 
 1. instala e liga o que faltar;
 2. cria o banco com o nome do projeto (`loja-virtual` vira `loja_virtual`);
 3. mostra **antes** o que vai mudar no `.env` (linha antiga → linha nova);
-4. guarda o `.env` original em `.env.sentinel.bak` na primeira mudança;
+4. guarda o `.env` original em `.env.larafim.bak` na primeira mudança;
 5. altera só as chaves daquele serviço (`DB_*`, `MAIL_*`, `AWS_*`…).
 
 **Desfazer** restaura o `.env` a partir da cópia. Os valores são gravados de forma literal (o
@@ -71,7 +71,7 @@ importa um backup.
 ## Adminer
 
 Gerenciador de bancos pelo navegador, em `http://db.offline`. Versão fixa (6.3.1), conferida por um
-SHA-256 gravado no código do Sentinel. Entra sozinho nos bancos do Sentinel e pede senha nos demais.
+SHA-256 gravado no código do Larafim. Entra sozinho nos bancos do Larafim e pede senha nos demais.
 
 ## Mailpit
 
@@ -87,5 +87,5 @@ Um "S3 de mentira" para testar upload de arquivos como na AWS, sem custo. Usa o
 
 - API em `http://127.0.0.1:9000`, painel em `http://s3.offline`.
 - A chave secreta é gerada no seu PC e guardada protegida pela DPAPI.
-- Ao usar num projeto, o Sentinel cria um bucket com o nome do projeto e preenche `AWS_*` no `.env`.
-- O Laravel precisa do pacote `league/flysystem-aws-s3-v3`; o Sentinel avisa quando falta.
+- Ao usar num projeto, o Larafim cria um bucket com o nome do projeto e preenche `AWS_*` no `.env`.
+- O Laravel precisa do pacote `league/flysystem-aws-s3-v3`; o Larafim avisa quando falta.

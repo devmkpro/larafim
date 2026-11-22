@@ -1,6 +1,6 @@
 # Terminal
 
-Com os atalhos do Sentinel no `PATH`, `php`, `composer`, `node`, `npm` e `npx` usam, em **qualquer
+Com os atalhos do Larafim no `PATH`, `php`, `composer`, `node`, `npm` e `npx` usam, em **qualquer
 terminal**, a versão do projeto da pasta atual.
 
 ```powershell
@@ -15,18 +15,18 @@ php -v              # PHP 8.5.x
 Em *Configurações › Terminal*:
 
 1. **Instalar/reparar atalhos**: cria `php.exe`, `composer.exe`, `node.exe`… em
-   `%LOCALAPPDATA%\Sentinel\bin`. São cópias do `sentinel-shim.exe`, um programa pequeno que só
+   `%LOCALAPPDATA%\Larafim\bin`. São cópias do `larafim-shim.exe`, um programa pequeno que só
    escolhe a versão e repassa os argumentos.
 2. **Colocar no PATH**: adiciona essa pasta ao `PATH` **do seu usuário** (não precisa de
    administrador). Abra um terminal novo para valer.
 
-Se houver outro `php.exe` no `PATH` do sistema, por exemplo do XAMPP, o Sentinel avisa, porque ele
+Se houver outro `php.exe` no `PATH` do sistema, por exemplo do XAMPP, o Larafim avisa, porque ele
 pode ser encontrado antes.
 
 ## Como a versão é escolhida
 
-1. A variável `SENTINEL_PHP` (ex.: `$env:SENTINEL_PHP = "8.3"`), se definida.
-2. O projeto do Sentinel que contém a pasta atual (versão fixada ou a mais nova compatível).
+1. A variável `LARAFIM_PHP` (ex.: `$env:LARAFIM_PHP = "8.3"`), se definida.
+2. O projeto do Larafim que contém a pasta atual (versão fixada ou a mais nova compatível).
 3. `.php-version` ou `composer.json` da pasta ou de uma pasta acima.
 4. A **versão padrão do terminal** (*Configurações › Terminal* ou o painel da bandeja).
 5. A mais nova instalada.

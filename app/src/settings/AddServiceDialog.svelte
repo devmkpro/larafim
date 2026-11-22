@@ -108,7 +108,7 @@
   <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="add-svc-title">
     <div class="content">
       <h2 id="add-svc-title">{t("Adicionar serviço")}</h2>
-      <p class="caption">{t("O Sentinel baixa e deixa pronto; liga sozinho quando algum projeto precisa.")}</p>
+      <p class="caption">{t("O Larafim baixa e deixa pronto; liga sozinho quando algum projeto precisa.")}</p>
 
       <div class="tabs" role="tablist">
         {#each tabs as tb (tb.id)}

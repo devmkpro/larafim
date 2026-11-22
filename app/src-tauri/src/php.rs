@@ -1,14 +1,14 @@
 //! Comandos de PHP: catálogo, instalar/atualizar/remover, extensões e
 //! verificação de atualizações em segundo plano.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use sentinel_runtimes::php::{self, CatalogEntry, InstalledPhp, Stage, ini};
-use sentinel_runtimes::{extras, http_client};
+use larafim_runtimes::php::{self, CatalogEntry, InstalledPhp, Stage, ini};
+use larafim_runtimes::{extras, http_client};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_opener::OpenerExt;

@@ -1,12 +1,12 @@
-//! Versão nova do Sentinel: confere a última release no GitHub ao abrir e a
+//! Versão nova do Larafim: confere a última release no GitHub ao abrir e a
 //! cada 6 horas (se a opção estiver ligada) e avisa as janelas. A pessoa
 //! baixa pela página da release; o app não baixa nem executa nada sozinho.
 
 use std::sync::Mutex;
 use std::time::Duration;
 
-use sentinel_core::t;
-use sentinel_runtimes::app_update::{self, REPO_URL};
+use larafim_core::t;
+use larafim_runtimes::app_update::{self, REPO_URL};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_opener::OpenerExt;
@@ -48,7 +48,7 @@ fn snapshot(app: &AppHandle) -> UpdateStatus {
 async fn check(app: &AppHandle) -> UpdateStatus {
     app.state::<UpdateState>().0.lock().unwrap().checking = true;
     let _ = app.emit("app:update", snapshot(app));
-    let result = match sentinel_runtimes::http_client() {
+    let result = match larafim_runtimes::http_client() {
         Ok(client) => app_update::latest(&client).await,
         Err(e) => Err(e),
     };
@@ -76,7 +76,7 @@ async fn check(app: &AppHandle) -> UpdateStatus {
     }
     let status = snapshot(app);
     if status.available {
-        tracing::info!(latest = status.latest, "versão nova do Sentinel disponível");
+        tracing::info!(latest = status.latest, "versão nova do Larafim disponível");
     }
     let _ = app.emit("app:update", status.clone());
     crate::tray::update_tooltip_for_update(app, &status);

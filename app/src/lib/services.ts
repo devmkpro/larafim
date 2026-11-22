@@ -186,7 +186,7 @@ const mock = {
     mockEmit("services-changed", null);
   },
   info: async (service: string, _project: string | null = null): Promise<ServiceInfo> => ({
-    data_dir: "C:\\Users\\voce\\AppData\\Local\\Sentinel\\data\\" + service,
+    data_dir: "C:\\Users\\voce\\AppData\\Local\\Larafim\\data\\" + service,
     log_file: null,
     log: ["2026-11-21 10:00:00 0 [Note] Server ready for connections", "2026-11-21 10:00:00 0 [Note] port: 3307"],
     env: [

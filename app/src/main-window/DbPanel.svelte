@@ -82,7 +82,7 @@
   async function choose(kind: DbKind) {
     error = null;
     if (kind === "none") {
-      await act(() => services.dbApply(project.path, "none"), t("O Sentinel deixou de gerenciar o banco deste projeto (o .env não foi alterado)."));
+      await act(() => services.dbApply(project.path, "none"), t("O Larafim deixou de gerenciar o banco deste projeto (o .env não foi alterado)."));
       return;
     }
     try {
@@ -153,7 +153,7 @@
 
   async function undoEnv() {
     const ok = await confirm(
-      t("Voltar o .env para como estava antes da primeira mudança feita pelo Sentinel?"),
+      t("Voltar o .env para como estava antes da primeira mudança feita pelo Larafim?"),
       t("Desfazer mudanças no .env"),
       "Desfazer",
     );
@@ -238,7 +238,7 @@
 {/if}
 
 {#if hasEnvBackup}
-  <button class="link caption" onclick={undoEnv}>{t("Desfazer mudanças do Sentinel no .env")}</button>
+  <button class="link caption" onclick={undoEnv}>{t("Desfazer mudanças do Larafim no .env")}</button>
 {/if}
 {#if notice}<p class="caption ok">{notice}</p>{/if}
 {#if error}<p class="caption err">{error}</p>{/if}
@@ -269,7 +269,7 @@
           </p>
         {:else if preview.kind === "postgres"}
           <p class="caption">
-            {t("O banco")} <span class="mono">{preview.data.database}</span> {t("será criado no PostgreSQL do Sentinel (se ainda não existir), e as extensões")} <span class="mono">pgsql</span> e <span class="mono">pdo_pgsql</span> {t("serão ligadas no PHP do projeto.")}
+            {t("O banco")} <span class="mono">{preview.data.database}</span> {t("será criado no PostgreSQL do Larafim (se ainda não existir), e as extensões")} <span class="mono">pgsql</span> e <span class="mono">pdo_pgsql</span> {t("serão ligadas no PHP do projeto.")}
           </p>
         {:else if preview.kind === "mariadb-own"}
           <p class="caption">
@@ -311,7 +311,7 @@
               <div class="d caption">{t("O .env já está assim. Nada muda.")}</div>
             {/each}
           </div>
-          <p class="caption">{t("Uma cópia do .env original fica em")} <span class="mono">.env.sentinel.bak</span> {t("e dá para desfazer.")}</p>
+          <p class="caption">{t("Uma cópia do .env original fica em")} <span class="mono">.env.larafim.bak</span> {t("e dá para desfazer.")}</p>
         {/if}
       </div>
       <div class="footer">

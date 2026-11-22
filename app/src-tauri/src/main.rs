@@ -3,8 +3,8 @@
 
 fn main() {
     // Execução elevada (UAC) só para gravar o arquivo hosts.
-    if let Some(code) = sentinel_server::hosts::run_helper_if_requested() {
+    if let Some(code) = larafim_server::hosts::run_helper_if_requested() {
         std::process::exit(code);
     }
-    sentinel_app_lib::run()
+    larafim_app_lib::run()
 }

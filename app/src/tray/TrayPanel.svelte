@@ -77,10 +77,10 @@
   }
   const groups = $derived<Item[][]>([
     ...(update?.available && update.latest
-      ? [[{ icon: "refresh" as GlyphName, label: t("Atualizar o Sentinel"), hint: update.latest, run: () => updates.openLink("update") }]]
+      ? [[{ icon: "refresh" as GlyphName, label: t("Atualizar o Larafim"), hint: update.latest, run: () => updates.openLink("update") }]]
       : []),
     [
-      { icon: "apps", label: t("Abrir Sentinel"), run: backend("main") },
+      { icon: "apps", label: t("Abrir Larafim"), run: backend("main") },
       { icon: "add", label: t("Novo projeto Laravel"), run: backend("new-laravel") },
     ],
     [
@@ -151,10 +151,10 @@
   {#if error}<p class="error">{error}</p>{/if}
 
   <div class="footer">
-    <span class="brand">Sentinel</span>
+    <span class="brand">Larafim</span>
     <span class="grow"></span>
     <button class="square" title={t("Configurações…")} onclick={() => go(() => api.openSettings("general"))}><Glyph name="settings" /></button>
-    <button class="square" title={t("Sair do Sentinel")} onclick={backend("quit")}><Glyph name="power" /></button>
+    <button class="square" title={t("Sair do Larafim")} onclick={backend("quit")}><Glyph name="power" /></button>
   </div>
 </div>
 

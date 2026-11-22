@@ -19,7 +19,7 @@
   let showTree = $state(true);
 
   const requested =
-    (window as { __SENTINEL_LOGS_PROJECT__?: string | null }).__SENTINEL_LOGS_PROJECT__ ??
+    (window as { __LARAFIM_LOGS_PROJECT__?: string | null }).__LARAFIM_LOGS_PROJECT__ ??
     new URLSearchParams(location.search).get("project");
 
   async function loadFiles(path: string) {

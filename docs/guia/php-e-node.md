@@ -6,9 +6,9 @@
 
 *Configurações › PHP* lista as versões publicadas no
 [catálogo oficial do PHP para Windows](https://downloads.php.net/~windows/releases/), com a última de
-cada minor. O Sentinel usa as builds **NTS x64**, as indicadas para FastCGI.
+cada minor. O Larafim usa as builds **NTS x64**, as indicadas para FastCGI.
 
-Ao instalar, o Sentinel:
+Ao instalar, o Larafim:
 
 1. baixa o zip oficial e confere o **SHA-256** publicado no catálogo;
 2. extrai com proteção contra arquivos maliciosos dentro do zip (veja [Segurança](../seguranca.md#downloads));
@@ -20,7 +20,7 @@ Ao instalar, o Sentinel:
 
 ### Atualizações
 
-O Sentinel compara as versões instaladas com o catálogo ao abrir e a cada poucas horas, e mostra um
+O Larafim compara as versões instaladas com o catálogo ao abrir e a cada poucas horas, e mostra um
 aviso quando há atualização. Ao atualizar, a build anterior do mesmo minor fica guardada para poder
 voltar, e as suas mudanças no `php.ini` são levadas para a nova.
 
@@ -40,7 +40,7 @@ O `composer.phar` é baixado do site oficial e conferido pelo SHA-256 publicado 
    `composer.json`).
 3. Senão, a mais nova instalada.
 
-Se nenhuma versão instalada atende, o Sentinel diz qual instalar. Ele nunca usa uma versão errada
+Se nenhuma versão instalada atende, o Larafim diz qual instalar. Ele nunca usa uma versão errada
 em silêncio.
 
 ## Node
@@ -61,5 +61,5 @@ Com **Servidor do Node** ligado no projeto, o comando (`npm run dev`, `pnpm dev`
   (`cmd` → `npm` → `node`), sem deixar processos órfãos;
 - com a saída ao vivo no painel do projeto.
 
-O comando é do próprio projeto (`package.json`): o Sentinel roda exatamente o que o projeto define.
-Só ligue projetos em que você confia (veja [Segurança](../seguranca.md#o-que-o-sentinel-não-protege)).
+O comando é do próprio projeto (`package.json`): o Larafim roda exatamente o que o projeto define.
+Só ligue projetos em que você confia (veja [Segurança](../seguranca.md#o-que-o-larafim-não-protege)).

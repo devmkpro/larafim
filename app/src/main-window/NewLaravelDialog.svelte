@@ -8,7 +8,7 @@
   import { app } from "../lib/state.svelte";
   import { toolsApi, type Created, type Kit } from "../lib/tools";
 
-  // Assistente: criar um projeto Laravel novo já cadastrado no Sentinel.
+  // Assistente: criar um projeto Laravel novo já cadastrado no Larafim.
   let { onclose, ondone }: { onclose: () => void; ondone: (path: string) => void } = $props();
 
   let name = $state("");
@@ -112,7 +112,7 @@
             </select>
           </div>
         </div>
-        {#if kit !== "none"}<p class="caption preview">{t("Inclui npm install e build (precisa do Node.js do Sentinel).")}</p>{/if}
+        {#if kit !== "none"}<p class="caption preview">{t("Inclui npm install e build (precisa do Node.js do Larafim).")}</p>{/if}
         <div class="row">
           <span>{t("Banco de dados")}</span>
           <div class="select">

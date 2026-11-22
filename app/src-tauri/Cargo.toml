@@ -1,21 +1,21 @@
 [package]
-name = "sentinel-app"
-description = "Sentinel — gerenciador local de PHP, Node e serviços"
+name = "larafim-app"
+description = "Larafim — gerenciador local de PHP, Node e serviços"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 
 [lib]
-name = "sentinel_app_lib"
+name = "larafim_app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-sentinel-core.workspace = true
-sentinel-runtimes.workspace = true
-sentinel-server.workspace = true
+larafim-core.workspace = true
+larafim-runtimes.workspace = true
+larafim-server.workspace = true
 tokio = { version = "1", features = ["time", "sync"] }
 semver = "1"
 base64 = "0.23"

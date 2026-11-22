@@ -4,18 +4,18 @@ Do zero ao primeiro projeto aberto no navegador.
 
 ## 1. Escolha a pasta dos projetos
 
-Na primeira abertura, o Sentinel pergunta onde ficam seus projetos (ex.: `D:\www`). Cada subpasta
+Na primeira abertura, o Larafim pergunta onde ficam seus projetos (ex.: `D:\www`). Cada subpasta
 vira um candidato a projeto. Dá para ter mais de uma pasta e mudar depois em
 *Configurações › Pastas de projetos*.
 
-Nada sobe sozinho: o Sentinel só **lê** as pastas para descobrir o que existe.
+Nada sobe sozinho: o Larafim só **lê** as pastas para descobrir o que existe.
 
 ## 2. Instale o PHP
 
 Em *Configurações › PHP*, clique em **Instalar** na versão que seus projetos usam. O download vem do
 site oficial do PHP para Windows, e o SHA-256 é conferido antes de extrair. O Composer é baixado junto.
 
-O Sentinel já sugere a versão certa para cada projeto, pelo `composer.json` ou pelo `.php-version`.
+O Larafim já sugere a versão certa para cada projeto, pelo `composer.json` ou pelo `.php-version`.
 
 ## 3. Importe os projetos
 
@@ -36,7 +36,7 @@ Pronto: clique no endereço ou em **Abrir no navegador**.
 ## 5. Banco de dados e e-mail (opcional)
 
 No painel do projeto, em **Serviços**, escolha o banco (SQLite, MariaDB, PostgreSQL ou um MySQL que
-você já tenha) e o e-mail (Mailpit). O Sentinel instala o que faltar, mostra o que vai mudar no `.env`
+você já tenha) e o e-mail (Mailpit). O Larafim instala o que faltar, mostra o que vai mudar no `.env`
 e só aplica depois da sua confirmação. Veja [Serviços e bancos](servicos.md).
 
 ## Próximos passos

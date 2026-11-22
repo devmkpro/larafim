@@ -1,4 +1,4 @@
-// HTTPS local (fase 9): CA do Sentinel e certificado por domínio.
+// HTTPS local (fase 9): CA do Larafim e certificado por domínio.
 import { invoke } from "@tauri-apps/api/core";
 import { inTauri } from "./api";
 
@@ -22,7 +22,7 @@ export const https = inTauri
   : {
       status: async () => ({ ...mock }),
       configure: async (enabled: boolean, port: number) => {
-        mock = { ...mock, enabled, port, ca_file: "C:\\sentinel\\data\\ca\\sentinel-ca-offline.crt" };
+        mock = { ...mock, enabled, port, ca_file: "C:\\larafim\\data\\ca\\larafim-ca-offline.crt" };
       },
       trust: async () => {
         mock = { ...mock, trusted: true };

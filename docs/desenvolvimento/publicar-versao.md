@@ -6,7 +6,7 @@
 request, no Windows:
 
 1. `npm ci`, traduções completas (`i18n.mjs check --strict`) e tipos da interface (`npm run check`);
-2. compila a interface e o `sentinel-shim`;
+2. compila a interface e o `larafim-shim`;
 3. `cargo clippy` sem avisos;
 4. `cargo test --workspace` (inclui os testes de segurança).
 

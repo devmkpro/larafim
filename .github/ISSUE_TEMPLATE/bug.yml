@@ -25,13 +25,13 @@ body:
   - type: input
     id: version
     attributes:
-      label: Versão do Sentinel e do Windows
-      placeholder: "Sentinel 0.1.0, Windows 11 24H2"
+      label: Versão do Larafim e do Windows
+      placeholder: "Larafim 0.1.0, Windows 11 24H2"
     validations:
       required: true
   - type: textarea
     id: logs
     attributes:
       label: Log
-      description: Trecho de %LOCALAPPDATA%\Sentinel\logs. Confira se não há caminhos ou nomes que você prefira não publicar.
+      description: Trecho de %LOCALAPPDATA%\Larafim\logs. Confira se não há caminhos ou nomes que você prefira não publicar.
       render: text

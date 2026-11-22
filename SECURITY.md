@@ -2,7 +2,7 @@
 
 ## Versões com correções
 
-Só a versão mais recente publicada em [Releases](https://github.com/josevictoremiliano/sentinel/releases)
+Só a versão mais recente publicada em [Releases](https://github.com/josevictoremiliano/larafim/releases)
 recebe correções de segurança.
 
 ## Como reportar uma falha
@@ -10,13 +10,13 @@ recebe correções de segurança.
 **Não abra uma issue pública** para falhas de segurança.
 
 Use o reporte privado do GitHub: aba **Security › Report a vulnerability** neste repositório
-([link direto](https://github.com/josevictoremiliano/sentinel/security/advisories/new)).
+([link direto](https://github.com/josevictoremiliano/larafim/security/advisories/new)).
 
 Inclua, se possível:
 
 - o que a falha permite (ler arquivos, executar código, escalar para administrador…);
 - passos para reproduzir ou uma prova de conceito;
-- a versão do Sentinel e do Windows.
+- a versão do Larafim e do Windows.
 
 O que esperar:
 
@@ -36,7 +36,7 @@ Interessam principalmente:
 - XSS na interface do app ou nas páginas do servidor local;
 - vazamento de senhas guardadas (DPAPI) ou da chave da CA local.
 
-Fora do escopo: o código dos **seus projetos** (o Sentinel executa o que o projeto define, como
+Fora do escopo: o código dos **seus projetos** (o Larafim executa o que o projeto define, como
 `npm run dev`), os bancos locais sem senha acessíveis por `127.0.0.1` (decisão de projeto, documentada)
 e ataques que exigem um programa malicioso já rodando como o seu usuário.
 

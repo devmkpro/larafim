@@ -1,10 +1,10 @@
 //! Terminal e linha de comando (fase 4): atalhos `php`/`composer` em
-//! `%LOCALAPPDATA%\Sentinel\bin`, PATH do usuário e abrir terminal no projeto.
+//! `%LOCALAPPDATA%\Larafim\bin`, PATH do usuário e abrir terminal no projeto.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::path::{Path, PathBuf};
 
-use sentinel_runtimes::php::select::{Selection, select};
+use larafim_runtimes::php::select::{Selection, select};
 use serde::Serialize;
 use tauri::{AppHandle, Manager, State};
 
@@ -12,10 +12,10 @@ use crate::AppState;
 
 type CmdResult<T> = Result<T, String>;
 
-const SHIM_FILE: &str = "sentinel-shim.exe";
+const SHIM_FILE: &str = "larafim-shim.exe";
 const TOOLS: [&str; 5] = ["php.exe", "composer.exe", "node.exe", "npm.exe", "npx.exe"];
 
-/// Onde está o executável do atalho que vem com o Sentinel.
+/// Onde está o executável do atalho que vem com o Larafim.
 fn shim_source(app: &AppHandle) -> Option<PathBuf> {
     let mut candidates = Vec::new();
     if let Ok(exe) = std::env::current_exe()
@@ -44,7 +44,7 @@ pub fn ensure_shims(app: &AppHandle) -> Result<(), String> {
 
 /// Copia o atalho como php.exe/composer.exe. `force` = mesmo se iguais.
 fn install(app: &AppHandle, bin: &Path) -> CmdResult<()> {
-    let source = shim_source(app).ok_or_else(|| t!("o atalho (sentinel-shim.exe) não foi encontrado junto do Sentinel"))?;
+    let source = shim_source(app).ok_or_else(|| t!("o atalho (larafim-shim.exe) não foi encontrado junto do Larafim"))?;
     std::fs::create_dir_all(bin).map_err(|e| e.to_string())?;
     for tool in TOOLS {
         let dest = bin.join(tool);
@@ -160,11 +160,11 @@ pub struct TerminalStatus {
     bin_dir: PathBuf,
     /// php.exe e composer.exe existem em bin.
     installed: bool,
-    /// O atalho que vem com o Sentinel foi encontrado (para instalar/reparar).
+    /// O atalho que vem com o Larafim foi encontrado (para instalar/reparar).
     source_found: bool,
     /// bin está no PATH do usuário.
     in_path: bool,
-    /// Outros php.exe que o Windows encontra ANTES do Sentinel.
+    /// Outros php.exe que o Windows encontra ANTES do Larafim.
     conflicts: Vec<String>,
     default_php: Option<String>,
 }
@@ -234,7 +234,7 @@ pub fn php_for_folder(state: State<'_, AppState>, path: PathBuf) -> Selection {
 }
 
 /// Abre o Windows Terminal (ou o Prompt de Comando) na pasta, já com os
-/// atalhos do Sentinel no começo do PATH — funciona mesmo sem mexer no PATH.
+/// atalhos do Larafim no começo do PATH — funciona mesmo sem mexer no PATH.
 #[tauri::command]
 pub fn open_terminal(app: AppHandle, state: State<'_, AppState>, path: PathBuf) -> CmdResult<()> {
     if !path.is_dir() {
@@ -258,7 +258,7 @@ pub fn open_terminal(app: AppHandle, state: State<'_, AppState>, path: PathBuf) 
             .spawn(),
         None => std::process::Command::new("cmd.exe")
             .arg("/K")
-            .arg(format!("echo {}", t!("Terminal do Sentinel: php e composer usam a versao do projeto.")))
+            .arg(format!("echo {}", t!("Terminal do Larafim: php e composer usam a versao do projeto.")))
             .current_dir(&path)
             .env("PATH", &env_path)
             .creation_flags(CREATE_NEW_CONSOLE)
@@ -267,8 +267,8 @@ pub fn open_terminal(app: AppHandle, state: State<'_, AppState>, path: PathBuf) 
     result.map(|_| ()).map_err(|e| t!("não foi possível abrir o terminal: {e}", e = e))
 }
 
-/// Ao abrir o Sentinel: se os atalhos já existem, atualiza para a versão
-/// que veio com este Sentinel (sem perguntar; não mexe no PATH).
+/// Ao abrir o Larafim: se os atalhos já existem, atualiza para a versão
+/// que veio com este Larafim (sem perguntar; não mexe no PATH).
 pub fn refresh_on_start(app: &AppHandle) {
     let state = app.state::<AppState>();
     let bin = state.paths.bin_dir();
@@ -298,8 +298,8 @@ mod tests {
     #[test]
     fn expands_variables() {
         // SAFETY: teste de uma thread só, variável exclusiva deste teste.
-        unsafe { std::env::set_var("SENTINEL_TESTE_X", r"C:\X") };
-        assert_eq!(expand(r"%SENTINEL_TESTE_X%\bin"), r"C:\X\bin");
+        unsafe { std::env::set_var("LARAFIM_TESTE_X", r"C:\X") };
+        assert_eq!(expand(r"%LARAFIM_TESTE_X%\bin"), r"C:\X\bin");
         assert_eq!(expand("%NAO_EXISTE_123%"), "%NAO_EXISTE_123%");
         assert_eq!(expand("sem%"), "sem%");
     }

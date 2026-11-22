@@ -1,13 +1,13 @@
 //! Comandos de versões do Node.js: catálogo, instalar, remover.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use sentinel_runtimes::http_client;
-use sentinel_runtimes::node::{self, NodeEntry};
+use larafim_runtimes::http_client;
+use larafim_runtimes::node::{self, NodeEntry};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 

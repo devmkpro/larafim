@@ -20,7 +20,7 @@ export interface FolderSelection {
 
 // ---------- Dados de exemplo (navegador) ----------
 let mockStatus: TerminalStatus = {
-  bin_dir: "C:\\Users\\voce\\AppData\\Local\\Sentinel\\bin",
+  bin_dir: "C:\\Users\\voce\\AppData\\Local\\Larafim\\bin",
   installed: false,
   source_found: true,
   in_path: false,

@@ -1,4 +1,4 @@
-// Ferramentas de tradução do Sentinel.
+// Ferramentas de tradução do Larafim.
 //
 //   node scripts/i18n.mjs check   textos sem tradução (e traduções sem uso) por idioma
 //   node scripts/i18n.mjs keys    todas as chaves encontradas no código (JSON)
@@ -115,18 +115,18 @@ if (cmd === "keys") {
     .map((l, i) => `  ${i ? "${ElseIf}" : "${If}"} $LANGUAGE == ${l.data._meta.langid}\n    StrCpy $0 "${l.code}"`)
     .join("\n");
   const nsh = `; Gerado por scripts/i18n.mjs sync — não edite à mão.
-; Grava o idioma escolhido no instalador; o Sentinel usa na primeira vez que abre.
+; Grava o idioma escolhido no instalador; o Larafim usa na primeira vez que abre.
 !include "LogicLib.nsh"
 
 !macro NSIS_HOOK_POSTINSTALL
   StrCpy $0 "${SOURCE}"
 ${cases}
   \${EndIf}
-  WriteRegStr HKCU "Software\\Sentinel" "Language" $0
+  WriteRegStr HKCU "Software\\Larafim" "Language" $0
 !macroend
 
 !macro NSIS_HOOK_POSTUNINSTALL
-  DeleteRegKey HKCU "Software\\Sentinel"
+  DeleteRegKey HKCU "Software\\Larafim"
 !macroend
 `;
   writeFileSync(join(root, "app", "src-tauri", "installer-hooks.nsh"), nsh);

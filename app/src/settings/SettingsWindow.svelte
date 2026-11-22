@@ -28,13 +28,13 @@
   ]);
 
   const initial =
-    (window as { __SENTINEL_SECTION__?: string }).__SENTINEL_SECTION__ ??
+    (window as { __LARAFIM_SECTION__?: string }).__LARAFIM_SECTION__ ??
     new URLSearchParams(location.search).get("section") ??
     "general";
   let section = $state<SettingsSection>(["general", "folders", "network", "php", "terminal", "node", "services", "about"].includes(initial) ? (initial as SettingsSection) : "general");
   onEvent<SettingsSection>("settings:navigate", (s) => (section = s));
 
-  // Versão nova do Sentinel: bolinha no item "Sobre".
+  // Versão nova do Larafim: bolinha no item "Sobre".
   let updateAvailable = $state(false);
   $effect(() => {
     updates.status().then((s) => (updateAvailable = s.available)).catch(() => {});
@@ -126,7 +126,7 @@
             </select>
           </div>
         </SettingRow>
-        <SettingRow icon="brush" title={t("Tema")} description={t("Escolha a aparência do Sentinel")}>
+        <SettingRow icon="brush" title={t("Tema")} description={t("Escolha a aparência do Larafim")}>
           <div class="select">
             <select
               value={app.config.theme}
@@ -141,7 +141,7 @@
         <SettingRow
           icon="pin"
           title={t("Continuar na bandeja ao fechar")}
-          description={t("A janela sai da memória e o Sentinel segue no ícone da bandeja")}
+          description={t("A janela sai da memória e o Larafim segue no ícone da bandeja")}
         >
           <span class="caption">{app.config.keep_in_tray ? t("Ativado") : t("Desativado")}</span>
           <Toggle

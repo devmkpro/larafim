@@ -107,7 +107,7 @@ const mock = {
   xdebugInfo: async (_v: string): Promise<XdebugInfo> => ({
     downloaded: xdebugOn,
     enabled: xdebugOn,
-    launch_json: '{\n  "name": "Sentinel: ouvir Xdebug",\n  "type": "php",\n  "request": "launch",\n  "port": 9003\n}',
+    launch_json: '{\n  "name": "Larafim: ouvir Xdebug",\n  "type": "php",\n  "request": "launch",\n  "port": 9003\n}',
   }),
   xdebugSet: async (v: string, enabled: boolean) => ((xdebugOn = enabled), mock.xdebugInfo(v)),
   laravelCreate: async (input: NewLaravel) => {

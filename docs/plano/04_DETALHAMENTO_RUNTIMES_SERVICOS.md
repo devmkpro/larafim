@@ -1,4 +1,4 @@
-# Sentinel — Especificação: runtimes, serviços e ferramentas
+# Larafim — Especificação: runtimes, serviços e ferramentas
 
 ## PHP — Fase 1
 **Catálogo:** versões minor, patch instalado, atualização disponível, projetos vinculados, instalar/atualizar/remover.
@@ -34,7 +34,7 @@
 ## Terminal, logs e monitor
 **Terminal:** abrir na pasta do projeto, com versão contextual; carregar somente ao entrar na aba.
 **Logs:** filtros por projeto/serviço, pausar acompanhamento, copiar trecho, abrir arquivo.
-**Monitor:** CPU/RAM por processo Sentinel, consumo e ações de desligamento.
+**Monitor:** CPU/RAM por processo Larafim, consumo e ações de desligamento.
 **Tray:** status geral, projetos online, iniciar/parar geral, abrir janela, sair.
 
 ## Configurações — Fases 0–8

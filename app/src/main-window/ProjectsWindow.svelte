@@ -22,18 +22,18 @@
   /** Muda quando um PHP é instalado/removido, para o painel recalcular a versão. */
   let phpVersionTick = $state(0);
   let status = $state<ServerStatus | null>(null);
-  // Versão nova do Sentinel: barra no topo até a pessoa dispensar aquela versão.
+  // Versão nova do Larafim: barra no topo até a pessoa dispensar aquela versão.
   let update = $state<UpdateStatus | null>(null);
   let dismissedUpdate = $state<string | null>(null);
   try {
-    dismissedUpdate = localStorage.getItem("sentinel:update-dismissed");
+    dismissedUpdate = localStorage.getItem("larafim:update-dismissed");
   } catch {
     // sem armazenamento: só não lembra a escolha
   }
   function dismissUpdate() {
     dismissedUpdate = update?.latest ?? null;
     try {
-      if (dismissedUpdate) localStorage.setItem("sentinel:update-dismissed", dismissedUpdate);
+      if (dismissedUpdate) localStorage.setItem("larafim:update-dismissed", dismissedUpdate);
     } catch {
       // idem
     }
@@ -44,7 +44,7 @@
   });
 
   // Aberta pelo painel da bandeja em "Novo projeto Laravel": já começa no diálogo.
-  let creating = $state(!!(window as { __SENTINEL_NEW_LARAVEL__?: boolean }).__SENTINEL_NEW_LARAVEL__);
+  let creating = $state(!!(window as { __LARAFIM_NEW_LARAVEL__?: boolean }).__LARAFIM_NEW_LARAVEL__);
   /** Diálogo de adicionar/revisar projeto. */
   let proposal = $state<FolderProposal | null>(null);
 
@@ -119,7 +119,7 @@
       const p = await projectsApi.inspectFolder(dir);
       if (p.already_imported) {
         selectedPath = projects.find((x) => x.path.toLowerCase() === dir.toLowerCase())?.path ?? selectedPath;
-        app.error = t("Este projeto já está no Sentinel.");
+        app.error = t("Este projeto já está no Larafim.");
         return;
       }
       proposal = p;
@@ -173,7 +173,7 @@
 <svelte:window onkeydown={onKey} />
 
 <div class="window">
-  <TitleBar title="Sentinel" />
+  <TitleBar title="Larafim" />
 
   <div class="toolbar">
     <button class="btn subtle" onclick={addProject}>
@@ -232,7 +232,7 @@
   {#if update?.available && update.latest && dismissedUpdate !== update.latest}
     <div class="newbar updatebar">
       <Glyph name="refresh" />
-      <span>{t("Versão {v} do Sentinel disponível.", { v: update.latest })}</span>
+      <span>{t("Versão {v} do Larafim disponível.", { v: update.latest })}</span>
       <button class="btn accent" onclick={() => updates.openLink("update")}>{t("Baixar")}</button>
       <button class="btn subtle" onclick={() => api.openSettings("about")}>{t("Detalhes")}</button>
       <button class="btn subtle icon" title={t("Lembrar depois")} onclick={dismissUpdate}><Glyph name="close" size={12} /></button>
@@ -248,7 +248,7 @@
           <Glyph name="folderOpen" size={40} />
           <h2>{t("Adicione sua pasta de projetos")}</h2>
           <p class="caption">
-            {t("Escolha onde ficam seus projetos, por exemplo")} <span class="mono">D:\www</span>{t(". O Sentinel lista o que encontrar e não liga nada sozinho. Também dá para adicionar um projeto avulso, de qualquer pasta.")}
+            {t("Escolha onde ficam seus projetos, por exemplo")} <span class="mono">D:\www</span>{t(". O Larafim lista o que encontrar e não liga nada sozinho. Também dá para adicionar um projeto avulso, de qualquer pasta.")}
           </p>
           <div class="empty-actions">
             <button class="btn accent" onclick={addRoot}>{t("Escolher pasta de projetos")}</button>
@@ -365,7 +365,7 @@
     <span>{t("Domínio .{tld}", { tld: app.config?.tld ?? "" })}</span>
     <span class="grow"></span>
     {#if app.saving}<span>{t("Salvando…")}</span>{/if}
-    <span>Sentinel {app.info?.version}</span>
+    <span>Larafim {app.info?.version}</span>
   </footer>
 </div>
 

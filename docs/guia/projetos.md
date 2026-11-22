@@ -2,15 +2,15 @@
 
 ## Pastas raiz
 
-Em *Configurações › Pastas de projetos* ficam as pastas onde o Sentinel procura projetos. Cada
+Em *Configurações › Pastas de projetos* ficam as pastas onde o Larafim procura projetos. Cada
 subpasta direta é um candidato. **Atualizar** (na janela principal) procura de novo, sob demanda: o
-Sentinel não fica varrendo o disco em segundo plano.
+Larafim não fica varrendo o disco em segundo plano.
 
 Projetos fora dessas pastas entram por **Adicionar projeto**.
 
 ## Detecção
 
-O Sentinel só lê arquivos que já existem no projeto:
+O Larafim só lê arquivos que já existem no projeto:
 
 | Sinal | Conclusão |
 |---|---|
@@ -36,13 +36,13 @@ No painel à direita da janela principal:
   versão do Node são editáveis.
 - **Serviços:** banco de dados, e-mail e storage (veja [Serviços e bancos](servicos.md)).
 
-A configuração fica em `%LOCALAPPDATA%\Sentinel\projects.toml`, **fora do repositório do projeto**:
-nada do Sentinel aparece no seu Git.
+A configuração fica em `%LOCALAPPDATA%\Larafim\projects.toml`, **fora do repositório do projeto**:
+nada do Larafim aparece no seu Git.
 
 ## Online e offline
 
 O interruptor **Online** liga o projeto no endereço dele. Projetos online voltam sozinhos quando o
-Sentinel abre. **Desligar todos** fica na barra de status e no menu da bandeja.
+Larafim abre. **Desligar todos** fica na barra de status e no menu da bandeja.
 
 Como funciona por baixo:
 
@@ -67,6 +67,6 @@ Detalhes em [Segurança](../seguranca.md#servidor-local).
 
 ## Remover um projeto
 
-**Remover do Sentinel** só tira o projeto da lista: nenhum arquivo é apagado. Projetos de uma pasta
+**Remover do Larafim** só tira o projeto da lista: nenhum arquivo é apagado. Projetos de uma pasta
 raiz removidos vão para "Projetos ignorados" em *Configurações › Pastas de projetos*, de onde podem
 voltar.

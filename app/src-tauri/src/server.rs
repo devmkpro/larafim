@@ -1,17 +1,17 @@
-//! Liga o servidor do Sentinel ao app: rotas a partir dos projetos, gateway
+//! Liga o servidor do Larafim ao app: rotas a partir dos projetos, gateway
 //! na porta configurada, arquivo hosts e projetos online/offline.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
-use sentinel_core::{ProjectKind, ProjectStatus, ProjectView};
-use sentinel_runtimes::php as rphp;
-use sentinel_server::port::{PortOwner, check_free};
-use sentinel_runtimes::node as rnode;
-use sentinel_server::{
+use larafim_core::{ProjectKind, ProjectStatus, ProjectView};
+use larafim_runtimes::php as rphp;
+use larafim_server::port::{PortOwner, check_free};
+use larafim_runtimes::node as rnode;
+use larafim_server::{
     DevEvent, DevServers, DevSpec, DevStatus, Gateway, PhpRuntime, PoolSettings, Pools, Routes, SharedRoutes, Site, hosts,
 };
 use serde::Serialize;
@@ -130,7 +130,7 @@ fn build_routes(app: &AppHandle) -> Routes {
         );
     }
     // Caixa de e-mails do Mailpit em mail.<domínio> (proxy para a interface dele).
-    if sentinel_runtimes::tools::mailpit_installed(&state.paths) {
+    if larafim_runtimes::tools::mailpit_installed(&state.paths) {
         let cell = dev
             .port_cell(crate::tools::MAILPIT_KEY)
             .unwrap_or_else(|| Arc::new(std::sync::Mutex::new(None)));
@@ -148,7 +148,7 @@ fn build_routes(app: &AppHandle) -> Routes {
     }
     // Painel do storage S3 em s3.<domínio> (porta fixa: a saída do RustFS
     // mostra também a da API, que não é a do painel).
-    if sentinel_runtimes::s3::rustfs_installed(&state.paths) {
+    if larafim_runtimes::s3::rustfs_installed(&state.paths) {
         routes.sites.insert(
             format!("s3.{tld}"),
             Site {
@@ -162,14 +162,14 @@ fn build_routes(app: &AppHandle) -> Routes {
         );
     }
     // Adminer em db.<domínio>, com o PHP mais novo instalado.
-    if sentinel_runtimes::extras::adminer_installed(&state.paths)
+    if larafim_runtimes::extras::adminer_installed(&state.paths)
         && let Some(p) = installed.first()
     {
         routes.sites.insert(
             format!("db.{tld}"),
             Site {
                 name: "Adminer".into(),
-                docroot: sentinel_runtimes::extras::adminer_dir(&state.paths),
+                docroot: larafim_runtimes::extras::adminer_dir(&state.paths),
                 php: Some(PhpRuntime { version: p.version.clone(), dir: p.dir.clone() }),
                 php_missing: false,
                 online: true,
@@ -192,9 +192,9 @@ fn wanted_hosts(app: &AppHandle) -> BTreeSet<String> {
         .projects
         .iter()
         .map(|p| format!("{}.{tld}", p.domain))
-        .chain(sentinel_runtimes::extras::adminer_installed(&state.paths).then(|| format!("db.{tld}")))
-        .chain(sentinel_runtimes::tools::mailpit_installed(&state.paths).then(|| format!("mail.{tld}")))
-        .chain(sentinel_runtimes::s3::rustfs_installed(&state.paths).then(|| format!("s3.{tld}")))
+        .chain(larafim_runtimes::extras::adminer_installed(&state.paths).then(|| format!("db.{tld}")))
+        .chain(larafim_runtimes::tools::mailpit_installed(&state.paths).then(|| format!("mail.{tld}")))
+        .chain(larafim_runtimes::s3::rustfs_installed(&state.paths).then(|| format!("s3.{tld}")))
         .filter(|h| hosts::valid_host(h))
         .collect()
 }
@@ -202,8 +202,8 @@ fn wanted_hosts(app: &AppHandle) -> BTreeSet<String> {
 /// Atualiza o hosts se precisar (pede UAC). Sem mudança, não pede nada.
 pub async fn ensure_hosts(app: &AppHandle) -> Result<(), ServerError> {
     // Só para desenvolvimento/testes automáticos: não mexe no hosts.
-    if std::env::var_os("SENTINEL_SKIP_HOSTS").is_some() {
-        tracing::warn!("SENTINEL_SKIP_HOSTS definido: arquivo hosts não foi verificado");
+    if std::env::var_os("LARAFIM_SKIP_HOSTS").is_some() {
+        tracing::warn!("LARAFIM_SKIP_HOSTS definido: arquivo hosts não foi verificado");
         return Ok(());
     }
     let wanted = wanted_hosts(app);
@@ -357,7 +357,7 @@ pub async fn status(app: &AppHandle) -> ServerStatus {
             .dev
             .all()
             .iter()
-            .filter(|d| d.state != sentinel_server::DevState::Exited && is_node_key(&d.key))
+            .filter(|d| d.state != larafim_server::DevState::Exited && is_node_key(&d.key))
             .count(),
         hosts_outdated: server.hosts_outdated.load(std::sync::atomic::Ordering::Relaxed),
     }
@@ -368,7 +368,7 @@ fn project_url(domain: &str, tld: &str, port: u16) -> String {
 }
 
 /// Endereço para abrir no navegador: HTTPS quando ligado.
-fn public_url(domain: &str, c: &sentinel_core::AppConfig) -> String {
+fn public_url(domain: &str, c: &larafim_core::AppConfig) -> String {
     if !c.https {
         return project_url(domain, &c.tld, c.http_port);
     }
@@ -384,7 +384,7 @@ async fn emit_status(app: &AppHandle) {
 fn set_online_flag(app: &AppHandle, path: &std::path::Path, online: bool) -> Result<(), ServerError> {
     let state = app.state::<AppState>();
     let mut store = state.projects.lock().unwrap();
-    let Some(cfg) = store.projects.iter_mut().find(|p| sentinel_core::store::same_path(&p.path, path)) else {
+    let Some(cfg) = store.projects.iter_mut().find(|p| larafim_core::store::same_path(&p.path, path)) else {
         return Err(ServerError::new("error", t!("importe o projeto antes de deixá-lo online")));
     };
     cfg.online = online;
@@ -402,7 +402,7 @@ pub async fn set_project_online(app: AppHandle, path: PathBuf, online: bool) -> 
     if online {
         let view = views(&app.state::<AppState>())
             .into_iter()
-            .find(|v| sentinel_core::store::same_path(&v.path, &path))
+            .find(|v| larafim_core::store::same_path(&v.path, &path))
             .ok_or_else(|| ServerError::new("error", t!("projeto não encontrado")))?;
         if view.status != ProjectStatus::Imported {
             return Err(ServerError::new("error", t!("importe o projeto antes de deixá-lo online")));
@@ -497,9 +497,9 @@ pub async fn fix_hosts(app: AppHandle) -> Result<ServerStatus, ServerError> {
 
 #[tauri::command]
 pub fn open_url(app: AppHandle, url: String) -> Result<(), String> {
-    // Só endereços do Sentinel: domínio local (http/https) ou localhost.
+    // Só endereços do Larafim: domínio local (http/https) ou localhost.
     let tld = app.state::<AppState>().config.lock().unwrap().tld.clone();
-    if !sentinel_core::safety::is_local_url(&url, &tld) {
+    if !larafim_core::safety::is_local_url(&url, &tld) {
         return Err(t!("endereço inválido"));
     }
     app.opener().open_url(url, None::<&str>).map_err(|e| e.to_string())
@@ -521,7 +521,7 @@ pub fn after_change(app: &AppHandle, hosts_too: bool) {
     });
 }
 
-/// Ao abrir o Sentinel: religa os projetos que estavam online. Não pede UAC
+/// Ao abrir o Larafim: religa os projetos que estavam online. Não pede UAC
 /// sozinho; se o hosts estiver desatualizado, a interface oferece corrigir.
 pub fn start(app: &AppHandle) {
     let app = app.clone();
@@ -641,7 +641,7 @@ fn start_dev(app: &AppHandle, v: &ProjectView) -> Result<(), ServerError> {
     };
     let url = project_url(&v.domain, &tld, http_port);
     // APP_URL: o plugin do Laravel para o Vite libera o domínio do projeto (CORS).
-    let mut env = vec![("APP_URL".to_string(), url.clone()), ("SENTINEL_URL".to_string(), url)];
+    let mut env = vec![("APP_URL".to_string(), url.clone()), ("LARAFIM_URL".to_string(), url)];
     if v.kind == ProjectKind::Node {
         let port = std::net::TcpListener::bind(("127.0.0.1", 0))
             .and_then(|l| l.local_addr())
@@ -677,7 +677,7 @@ pub fn dev_info(app: AppHandle, path: PathBuf) -> DevInfo {
 pub async fn restart_dev(app: AppHandle, path: PathBuf) -> Result<(), ServerError> {
     let view = views(&app.state::<AppState>())
         .into_iter()
-        .find(|v| sentinel_core::store::same_path(&v.path, &path))
+        .find(|v| larafim_core::store::same_path(&v.path, &path))
         .ok_or_else(|| ServerError::new("error", t!("projeto não encontrado")))?;
     if !view.online || !needs_dev(&view) {
         return Err(ServerError::new("error", t!("o projeto não está online com servidor do Node")));
@@ -703,7 +703,7 @@ fn forward_dev_events(app: &AppHandle) {
                     let _ = app.emit("node:log", DevLog { key, line });
                 }
                 DevEvent::Status(s) => {
-                    if s.state == sentinel_server::DevState::Exited {
+                    if s.state == larafim_server::DevState::Exited {
                         crate::tools::on_process_exit(&app, &s.key, s.exit_code);
                     }
                     let _ = app.emit("node:status", &s);

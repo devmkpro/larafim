@@ -1,10 +1,10 @@
 //! Idioma do app: escolhido no instalador (gravado no registro), depois
 //! trocado em Configurações › Geral. Sem escolha, segue o Windows.
 
-use sentinel_core::i18n;
+use larafim_core::i18n;
 
-/// Onde o instalador grava o idioma escolhido (HKCU\Software\Sentinel\Language).
-const REG_KEY: &str = r"Software\Sentinel";
+/// Onde o instalador grava o idioma escolhido (HKCU\Software\Larafim\Language).
+const REG_KEY: &str = r"Software\Larafim";
 const REG_VALUE: &str = "Language";
 
 fn wide(s: &str) -> Vec<u16> {

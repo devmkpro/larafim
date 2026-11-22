@@ -72,7 +72,7 @@ pub fn service_info(app: AppHandle, service: String, project: Option<PathBuf>) -
         "mariadb" => {
             let port = app.state::<AppState>().config.lock().unwrap().db_port;
             let setup = crate::services::maria_setup(&app).ok();
-            let log_file = setup.as_ref().map(|s| s.data_dir.join("sentinel-mariadb.log"));
+            let log_file = setup.as_ref().map(|s| s.data_dir.join("larafim-mariadb.log"));
             ServiceInfo {
                 data_dir: setup.map(|s| s.data_dir),
                 log: log_file.as_deref().map(tail_file).unwrap_or_default(),
@@ -83,7 +83,7 @@ pub fn service_info(app: AppHandle, service: String, project: Option<PathBuf>) -
         "postgres" => {
             let port = app.state::<AppState>().config.lock().unwrap().pg_port;
             let setup = crate::pg::pg_setup(&app).ok();
-            let log_file = setup.as_ref().map(|s| s.data_dir.join("sentinel-postgres.log"));
+            let log_file = setup.as_ref().map(|s| s.data_dir.join("larafim-postgres.log"));
             ServiceInfo {
                 data_dir: setup.map(|s| s.data_dir),
                 log: log_file.as_deref().map(tail_file).unwrap_or_default(),
@@ -94,9 +94,9 @@ pub fn service_info(app: AppHandle, service: String, project: Option<PathBuf>) -
         "own" => {
             let path = project.ok_or_else(|| "projeto ausente".to_string())?;
             let cfg = crate::services::project_config(&app, &path)?;
-            let own = crate::services::own_of(&cfg).ok_or_else(|| sentinel_core::t!("o projeto não tem MariaDB próprio configurado"))?;
+            let own = crate::services::own_of(&cfg).ok_or_else(|| larafim_core::t!("o projeto não tem MariaDB próprio configurado"))?;
             let setup = crate::services::own_setup(&app, &path, &own).ok();
-            let log_file = setup.as_ref().map(|s| s.data_dir.join("sentinel-mariadb.log"));
+            let log_file = setup.as_ref().map(|s| s.data_dir.join("larafim-mariadb.log"));
             ServiceInfo {
                 data_dir: setup.map(|s| s.data_dir),
                 log: log_file.as_deref().map(tail_file).unwrap_or_default(),

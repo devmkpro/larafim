@@ -1,4 +1,4 @@
-//! App desktop do Sentinel (Tauri 2).
+//! App desktop do Larafim (Tauri 2).
 //!
 //! Leveza: janelas são **destruídas** ao fechar, liberando o WebView da
 //! memória. Com "continuar na bandeja" ligado, o processo segue vivo só com o
@@ -26,7 +26,7 @@ mod updates;
 
 use std::sync::Mutex;
 
-use sentinel_core::{AppConfig, Paths, ProjectsFile, Theme};
+use larafim_core::{AppConfig, Paths, ProjectsFile, Theme};
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 pub const MAIN_WINDOW: &str = "main";
@@ -49,8 +49,8 @@ pub struct AppState {
 
 pub fn run() {
     let paths = Paths::default_root().expect("pasta de dados indisponível");
-    paths.ensure().expect("não foi possível criar a pasta de dados do Sentinel");
-    let _log_guard = sentinel_core::logging::init(&paths.logs_dir());
+    paths.ensure().expect("não foi possível criar a pasta de dados do Larafim");
+    let _log_guard = larafim_core::logging::init(&paths.logs_dir());
 
     let mut config = AppConfig::load(&paths.config_file()).unwrap_or_else(|e| {
         tracing::error!("configuração ilegível, usando padrão: {e}");
@@ -58,7 +58,7 @@ pub fn run() {
     });
     // Idioma: o da configuração, ou o escolhido no instalador, ou o do Windows.
     let (language, decided_now) = language::resolve(config.language.as_deref());
-    sentinel_core::i18n::set_language(&language);
+    larafim_core::i18n::set_language(&language);
     if decided_now {
         config.language = Some(language.clone());
         if let Err(e) = config.save(&paths.config_file()) {
@@ -70,10 +70,10 @@ pub fn run() {
         tracing::error!("projects.toml ilegível, começando vazio: {e}");
         ProjectsFile::default()
     });
-    tracing::info!(version = env!("CARGO_PKG_VERSION"), root = %paths.root().display(), "Sentinel iniciando");
+    tracing::info!(version = env!("CARGO_PKG_VERSION"), root = %paths.root().display(), "Larafim iniciando");
 
     let app = tauri::Builder::default()
-        // Abrir o Sentinel de novo só traz a janela existente para frente.
+        // Abrir o Larafim de novo só traz a janela existente para frente.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             show_main_window(app);
         }))
@@ -212,7 +212,7 @@ pub fn run() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("erro ao iniciar o Sentinel");
+        .expect("erro ao iniciar o Larafim");
 
     app.run(|app, event| {
         if let RunEvent::Exit = event {
@@ -223,7 +223,7 @@ pub fn run() {
             // `code == None`: a última janela foi fechada (não foi um "Sair").
             if code.is_none() && keep_in_tray(app) {
                 api.prevent_exit();
-                tracing::info!("janelas fechadas; Sentinel continua na bandeja");
+                tracing::info!("janelas fechadas; Larafim continua na bandeja");
             }
         }
     });
@@ -232,12 +232,12 @@ pub fn run() {
 /// Troca o idioma do backend: mensagens novas, menu da bandeja e título
 /// das janelas abertas (a interface troca sozinha pelo evento config-changed).
 pub(crate) fn language_changed(app: &AppHandle, code: &str) {
-    sentinel_core::i18n::set_language(code);
+    larafim_core::i18n::set_language(code);
     if let Some(w) = app.get_webview_window(SETTINGS_WINDOW) {
-        let _ = w.set_title(&sentinel_core::t!("Configurações — Sentinel"));
+        let _ = w.set_title(&larafim_core::t!("Configurações — Larafim"));
     }
     if let Some(w) = app.get_webview_window(LOGS_WINDOW) {
-        let _ = w.set_title(&sentinel_core::t!("Logs — Sentinel"));
+        let _ = w.set_title(&larafim_core::t!("Logs — Larafim"));
     }
     let app = app.clone();
     tauri::async_runtime::spawn(async move {
@@ -296,7 +296,7 @@ pub fn show_main_window(app: &AppHandle) {
     if focus_existing(app, MAIN_WINDOW) {
         return;
     }
-    let result = window_builder(app, MAIN_WINDOW, "Sentinel", (1120.0, 720.0), (860.0, 520.0)).build();
+    let result = window_builder(app, MAIN_WINDOW, "Larafim", (1120.0, 720.0), (860.0, 520.0)).build();
     if let Err(e) = result {
         tracing::error!("não foi possível abrir a janela principal: {e}");
     }
@@ -308,8 +308,8 @@ pub fn show_main_window_new_laravel(app: &AppHandle) {
         let _ = app.emit_to(MAIN_WINDOW, "main:new-laravel", ());
         return;
     }
-    let result = window_builder(app, MAIN_WINDOW, "Sentinel", (1120.0, 720.0), (860.0, 520.0))
-        .initialization_script("window.__SENTINEL_NEW_LARAVEL__ = true;")
+    let result = window_builder(app, MAIN_WINDOW, "Larafim", (1120.0, 720.0), (860.0, 520.0))
+        .initialization_script("window.__LARAFIM_NEW_LARAVEL__ = true;")
         .build();
     if let Err(e) = result {
         tracing::error!("não foi possível abrir a janela principal: {e}");
@@ -320,7 +320,7 @@ pub fn show_main_window_new_laravel(app: &AppHandle) {
 fn panel_builder<'a>(app: &'a AppHandle, label: &'a str, size: (f64, f64)) -> WebviewWindowBuilder<'a, tauri::Wry, AppHandle> {
     use tauri::window::{Effect, EffectsBuilder};
     WebviewWindowBuilder::new(app, label, WebviewUrl::default())
-        .title("Sentinel")
+        .title("Larafim")
         .inner_size(size.0, size.1)
         .decorations(false)
         .shadow(true)
@@ -339,10 +339,10 @@ pub fn show_logs_window(app: &AppHandle, project: Option<&str>) {
         return;
     }
     let init = format!(
-        "window.__SENTINEL_LOGS_PROJECT__ = {};",
+        "window.__LARAFIM_LOGS_PROJECT__ = {};",
         serde_json::to_string(&project).unwrap_or_else(|_| "null".into())
     );
-    let result = window_builder(app, LOGS_WINDOW, &sentinel_core::t!("Logs — Sentinel"), (1100.0, 700.0), (720.0, 460.0))
+    let result = window_builder(app, LOGS_WINDOW, &larafim_core::t!("Logs — Larafim"), (1100.0, 700.0), (720.0, 460.0))
         .initialization_script(&init)
         .build();
     if let Err(e) = result {
@@ -358,10 +358,10 @@ pub fn show_settings_window(app: &AppHandle, section: &str) {
     }
     // A seção inicial é entregue antes da página carregar.
     let init = format!(
-        "window.__SENTINEL_SECTION__ = {};",
+        "window.__LARAFIM_SECTION__ = {};",
         serde_json::to_string(section).unwrap_or_else(|_| "\"general\"".into())
     );
-    let result = window_builder(app, SETTINGS_WINDOW, &sentinel_core::t!("Configurações — Sentinel"), (1040.0, 680.0), (760.0, 480.0))
+    let result = window_builder(app, SETTINGS_WINDOW, &larafim_core::t!("Configurações — Larafim"), (1040.0, 680.0), (760.0, 480.0))
         .initialization_script(&init)
         .build();
     if let Err(e) = result {

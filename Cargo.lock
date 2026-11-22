@@ -2267,6 +2267,96 @@ dependencies = [
 ]
 
 [[package]]
+name = "larafim-app"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "larafim-core",
+ "larafim-runtimes",
+ "larafim-server",
+ "semver",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-opener",
+ "tauri-plugin-single-instance",
+ "tokio",
+ "tracing",
+ "windows-sys 0.61.2",
+ "winreg",
+]
+
+[[package]]
+name = "larafim-core"
+version = "0.1.0"
+dependencies = [
+ "dirs",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.21",
+ "toml 1.2.1+spec-1.1.0",
+ "tracing",
+ "tracing-appender",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "larafim-runtimes"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "larafim-core",
+ "reqwest",
+ "semver",
+ "serde",
+ "serde_json",
+ "sha2 0.11.1",
+ "tempfile",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "zip",
+]
+
+[[package]]
+name = "larafim-server"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "futures-util",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "larafim-core",
+ "mime_guess",
+ "percent-encoding",
+ "rcgen",
+ "runas",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.21",
+ "time",
+ "tokio",
+ "tokio-rustls",
+ "tokio-util",
+ "tracing",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "larafim-shim"
+version = "0.1.0"
+dependencies = [
+ "larafim-core",
+ "larafim-runtimes",
+ "serde_json",
+ "windows-sys 0.61.2",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3768,96 +3858,6 @@ checksum = "8a7852d02fc848982e0c167ef163aaff9cd91dc640ba85e263cb1ce46fae51cd"
 dependencies = [
  "serde",
  "serde_core",
-]
-
-[[package]]
-name = "sentinel-app"
-version = "0.1.0"
-dependencies = [
- "base64 0.23.1",
- "semver",
- "sentinel-core",
- "sentinel-runtimes",
- "sentinel-server",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-opener",
- "tauri-plugin-single-instance",
- "tokio",
- "tracing",
- "windows-sys 0.61.2",
- "winreg",
-]
-
-[[package]]
-name = "sentinel-core"
-version = "0.1.0"
-dependencies = [
- "dirs",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.21",
- "toml 1.2.1+spec-1.1.0",
- "tracing",
- "tracing-appender",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "sentinel-runtimes"
-version = "0.1.0"
-dependencies = [
- "hex",
- "reqwest",
- "semver",
- "sentinel-core",
- "serde",
- "serde_json",
- "sha2 0.11.1",
- "tempfile",
- "thiserror 2.0.21",
- "tokio",
- "tracing",
- "zip",
-]
-
-[[package]]
-name = "sentinel-server"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "futures-util",
- "http-body-util",
- "hyper",
- "hyper-util",
- "mime_guess",
- "percent-encoding",
- "rcgen",
- "runas",
- "sentinel-core",
- "serde",
- "tempfile",
- "thiserror 2.0.21",
- "time",
- "tokio",
- "tokio-rustls",
- "tokio-util",
- "tracing",
- "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "sentinel-shim"
-version = "0.1.0"
-dependencies = [
- "sentinel-core",
- "sentinel-runtimes",
- "serde_json",
- "windows-sys 0.61.2",
 ]
 
 [[package]]

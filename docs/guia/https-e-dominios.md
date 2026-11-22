@@ -10,32 +10,32 @@ quando mais de um desses programas está instalado. `.offline` não é um domín
 da IANA, e o arquivo `hosts` tem prioridade sobre a internet de qualquer forma.
 
 Dica: como `.offline` não é um domínio conhecido, digitar só `loja.offline` na barra do navegador pode
-virar uma busca. Use o endereço completo (`http://loja.offline`) na primeira vez; o Sentinel sempre
+virar uma busca. Use o endereço completo (`http://loja.offline`) na primeira vez; o Larafim sempre
 abre o endereço completo.
 
 ## O arquivo `hosts`
 
-Para o Windows saber que `loja.offline` é este PC, o Sentinel mantém um bloco no arquivo
+Para o Windows saber que `loja.offline` é este PC, o Larafim mantém um bloco no arquivo
 `C:\Windows\System32\drivers\etc\hosts`:
 
 ```
-# BEGIN SENTINEL
+# BEGIN LARAFIM
 127.0.0.1 loja.offline
 127.0.0.1 db.offline
-# END SENTINEL
+# END LARAFIM
 ```
 
-- Alterar esse arquivo exige administrador. O Sentinel pede (UAC) **só quando a lista de domínios
+- Alterar esse arquivo exige administrador. O Larafim pede (UAC) **só quando a lista de domínios
   muda**. Ligar e desligar projetos já importados não pede de novo.
 - Quem grava é um pequeno ajudante elevado que **revalida cada linha**: só aceita
   `127.0.0.1 <domínio válido>`, no máximo 2000 linhas, e nunca mexe fora do bloco.
-- Antes de gravar, ele guarda uma cópia em `hosts.sentinel-backup`.
+- Antes de gravar, ele guarda uma cópia em `hosts.larafim-backup`.
 
 ## HTTPS local
 
 Em *Configurações › Rede e domínios › HTTPS*:
 
-1. Ligue **HTTPS**. O Sentinel cria uma autoridade certificadora (CA) só sua e passa a responder também
+1. Ligue **HTTPS**. O Larafim cria uma autoridade certificadora (CA) só sua e passa a responder também
    em `https://` (porta 443).
 2. Clique em **Confiar…** e confirme a pergunta do Windows. A CA é instalada **só no seu usuário**,
    não no computador todo.
@@ -51,7 +51,7 @@ O PHP recebe `HTTPS=on` e o Node recebe `X-Forwarded-Proto: https`, então o Lar
 
 ### Firefox e ferramentas de linha de comando
 
-- O **Firefox** tem a própria lista de CAs: importe o `.crt` de `%LOCALAPPDATA%\Sentinel\data\ca\`
+- O **Firefox** tem a própria lista de CAs: importe o `.crt` de `%LOCALAPPDATA%\Larafim\data\ca\`
   ou ligue `security.enterprise_roots.enabled` em `about:config`.
 - O `curl` do Windows, o PowerShell e o .NET checam revogação e falham com certificados locais. Use
   `curl --ssl-no-revoke` ou equivalente.
@@ -67,5 +67,5 @@ O PHP recebe `HTTPS=on` e o Node recebe `X-Forwarded-Proto: https`, então o Lar
 | Mailpit (SMTP) | 1025 |
 | Storage S3 (API) | 9000 |
 
-Se a porta 80 estiver ocupada (Laragon, IIS, Apache), o Sentinel mostra **quem** ocupa e permite usar
+Se a porta 80 estiver ocupada (Laragon, IIS, Apache), o Larafim mostra **quem** ocupa e permite usar
 outra porta (os endereços passam a ter `:porta`). Tudo escuta só em `127.0.0.1`.

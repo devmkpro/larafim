@@ -1,18 +1,18 @@
 //! Ferramentas (fase 7): Mailpit, logs do projeto, workers do Laravel,
 //! Xdebug e criação de projeto Laravel novo.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use sentinel_core::envfile::{self, DiffLine, EnvChange};
-use sentinel_core::store::same_path;
-use sentinel_core::{ProjectKind, ProjectView};
-use sentinel_runtimes::php::{self as rphp};
-use sentinel_runtimes::{http_client, tools};
-use sentinel_server::DevSpec;
+use larafim_core::envfile::{self, DiffLine, EnvChange};
+use larafim_core::store::same_path;
+use larafim_core::{ProjectKind, ProjectView};
+use larafim_runtimes::php::{self as rphp};
+use larafim_runtimes::{http_client, tools};
+use larafim_server::DevSpec;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -52,7 +52,7 @@ fn notify_projects(app: &AppHandle) {
     let _ = app.emit("projects-changed", serde_json::json!({ "projects": store.views(&roots), "ignored": store.ignored }));
 }
 
-pub(crate) fn update_project(app: &AppHandle, path: &Path, f: impl FnOnce(&mut sentinel_core::ProjectConfig)) -> Result<(), String> {
+pub(crate) fn update_project(app: &AppHandle, path: &Path, f: impl FnOnce(&mut larafim_core::ProjectConfig)) -> Result<(), String> {
     let state = app.state::<AppState>();
     {
         let mut store = state.projects.lock().unwrap();
@@ -120,7 +120,7 @@ pub async fn start_mailpit(app: &AppHandle) -> Result<(), String> {
         tools::install_mailpit(&client, &paths).await.map_err(|e| e.to_string())?;
     }
     for port in [MAIL_UI_PORT, MAIL_SMTP_PORT] {
-        if let Err(owner) = sentinel_server::port::check_free(port) {
+        if let Err(owner) = larafim_server::port::check_free(port) {
             let who = owner.map(|o| o.name).unwrap_or_else(|| t!("outro programa"));
             return Err(t!("a porta {port} (Mailpit) está ocupada por {who}", port = port, who = who));
         }
@@ -461,13 +461,13 @@ pub async fn laravel_create(app: AppHandle, input: NewLaravel) -> CmdResult<Stri
     if !rphp::list_installed(&paths.php_dir()).iter().any(|p| p.minor == input.php) {
         return Err(t!("o PHP {a} não está instalado", a = input.php));
     }
-    if !sentinel_runtimes::extras::composer_path(&paths).is_file() {
-        return Err(t!("o Composer ainda não foi baixado (instale um PHP pelo Sentinel)"));
+    if !larafim_runtimes::extras::composer_path(&paths).is_file() {
+        return Err(t!("o Composer ainda não foi baixado (instale um PHP pelo Larafim)"));
     }
-    if input.kit != "none" && sentinel_runtimes::node::list_installed(&paths.node_dir()).is_empty() {
+    if input.kit != "none" && larafim_runtimes::node::list_installed(&paths.node_dir()).is_empty() {
         return Err(t!("os starter kits precisam do Node.js: instale em Configurações › Node.js"));
     }
-    // Os atalhos (php, composer, npm) escolhem as versões; SENTINEL_PHP fixa o PHP.
+    // Os atalhos (php, composer, npm) escolhem as versões; LARAFIM_PHP fixa o PHP.
     crate::terminal::ensure_shims(&app)?;
     let mut command = format!("composer create-project {package} \"{name}\" --no-interaction --prefer-dist");
     if input.kit != "none" {
@@ -485,7 +485,7 @@ pub async fn laravel_create(app: AppHandle, input: NewLaravel) -> CmdResult<Stri
             cwd: input.root.clone(),
             command,
             node_dir: paths.bin_dir(),
-            env: vec![("SENTINEL_PHP".into(), input.php.clone()), ("COMPOSER_NO_INTERACTION".into(), "1".into())],
+            env: vec![("LARAFIM_PHP".into(), input.php.clone()), ("COMPOSER_NO_INTERACTION".into(), "1".into())],
         })
         .map_err(|e| e.to_string())?;
     tracing::info!(name, kit = input.kit, "criando projeto Laravel");

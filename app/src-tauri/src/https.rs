@@ -1,13 +1,13 @@
-//! HTTPS local (fase 9): CA do Sentinel (restrita ao domínio local), chave
+//! HTTPS local (fase 9): CA do Larafim (restrita ao domínio local), chave
 //! guardada com DPAPI, e o certificado dela no repositório "Autoridades
 //! raiz confiáveis" do usuário — só quando a pessoa pede (o Windows mostra
 //! um aviso de segurança para ela confirmar).
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use sentinel_server::tls::{self, CaPem, SniResolver};
+use larafim_server::tls::{self, CaPem, SniResolver};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -22,7 +22,7 @@ fn ca_dir(app: &AppHandle) -> PathBuf {
 /// Uma CA por domínio local (a restrição de nome vale só para ele).
 fn ca_files(app: &AppHandle, tld: &str) -> (PathBuf, PathBuf) {
     let dir = ca_dir(app);
-    (dir.join(format!("sentinel-ca-{tld}.crt")), dir.join(format!("sentinel-ca-{tld}.key.dpapi")))
+    (dir.join(format!("larafim-ca-{tld}.crt")), dir.join(format!("larafim-ca-{tld}.key.dpapi")))
 }
 
 fn computer_name() -> String {
@@ -61,7 +61,7 @@ mod store {
         let name: Vec<u16> = "Root".encode_utf16().chain(std::iter::once(0)).collect();
         // SAFETY: nome terminado em zero; o handle é fechado por quem chama.
         let store = unsafe { CertOpenStore(CERT_STORE_PROV_SYSTEM_W, 0, 0, CERT_SYSTEM_STORE_CURRENT_USER, name.as_ptr().cast()) };
-        if store.is_null() { Err(sentinel_core::t!("não foi possível abrir os certificados do usuário")) } else { Ok(store) }
+        if store.is_null() { Err(larafim_core::t!("não foi possível abrir os certificados do usuário")) } else { Ok(store) }
     }
 
     /// Procura o certificado (mesmos bytes) e chama `f` com o contexto.
@@ -102,7 +102,7 @@ mod store {
         };
         // SAFETY: handle aberto acima.
         unsafe { CertCloseStore(store, 0) };
-        if ok != 0 { Ok(()) } else { Err(sentinel_core::t!("o certificado não foi instalado (o aviso do Windows foi recusado?)")) }
+        if ok != 0 { Ok(()) } else { Err(larafim_core::t!("o certificado não foi instalado (o aviso do Windows foi recusado?)")) }
     }
 
     pub fn remove(der: &[u8]) -> Result<(), String> {
@@ -112,7 +112,7 @@ mod store {
         })?;
         match r {
             Some(true) | None => Ok(()),
-            Some(false) => Err(sentinel_core::t!("o certificado não foi removido (o aviso do Windows foi recusado?)")),
+            Some(false) => Err(larafim_core::t!("o certificado não foi removido (o aviso do Windows foi recusado?)")),
         }
     }
 }

@@ -1,0 +1,18 @@
+[package]
+name = "larafim-shim"
+description = "Atalhos php.exe e composer.exe do Larafim: usam a versão do PHP certa para a pasta atual"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "larafim-shim"
+path = "src/main.rs"
+
+[dependencies]
+larafim-core.workspace = true
+larafim-runtimes.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_System_Console"] }

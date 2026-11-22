@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Sentinel",
+  "productName": "Larafim",
   "version": "0.1.0",
-  "identifier": "dev.sentinel.app",
+  "identifier": "dev.larafim.app",
   "build": {
-    "beforeDevCommand": "cargo build -p sentinel-shim && npm run dev",
+    "beforeDevCommand": "cargo build -p larafim-shim && npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "node ../scripts/i18n.mjs sync && cargo build -p sentinel-shim --release && npm run build",
+    "beforeBuildCommand": "node ../scripts/i18n.mjs sync && cargo build -p larafim-shim --release && npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -42,9 +42,9 @@
       }
     },
     "resources": {
-      "../../target/release/sentinel-shim.exe": "sentinel-shim.exe"
+      "../../target/release/larafim-shim.exe": "larafim-shim.exe"
     },
     "shortDescription": "PHP, Node e bancos locais para seus projetos",
-    "publisher": "Sentinel"
+    "publisher": "Larafim"
   }
 }

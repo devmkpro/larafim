@@ -20,14 +20,14 @@ Logs de outros formatos aparecem uma linha por entrada.
 Em *Configurações › PHP*, por versão: **ligar Xdebug** baixa a DLL certa de
 [xdebug.org](https://xdebug.org/download) (versão do PHP, NTS, x64, conferida pelo SHA-256 da página)
 e ajusta o `php.ini` no modo `debug` com `start_with_request=trigger`. O Xdebug só entra em ação
-quando o navegador ou a IDE pedem, para não deixar tudo lento. O Sentinel mostra o `launch.json`
+quando o navegador ou a IDE pedem, para não deixar tudo lento. O Larafim mostra o `launch.json`
 pronto para o VS Code.
 
 ## Workers do Laravel
 
 No painel de projetos Laravel: **fila** (`queue:work`), **agendador** (`schedule:work`) e **Reverb**
 (`reverb:start`, quando instalado). Rodam como processos gerenciados, com log ao vivo, reinício e
-volta automática quando o Sentinel abre.
+volta automática quando o Larafim abre.
 
 ## Novo projeto Laravel
 
@@ -39,9 +39,9 @@ O nome só aceita letras, números, `-` e `_`.
 
 ## Painel da bandeja
 
-O **clique esquerdo** no ícone do Sentinel, perto do relógio, abre um painel com:
+O **clique esquerdo** no ícone do Larafim, perto do relógio, abre um painel com:
 
-- **Abrir Sentinel** e **Novo projeto Laravel**;
+- **Abrir Larafim** e **Novo projeto Laravel**;
 - **E-mail** (Mailpit), **Visualizador de logs** e **Serviços**;
 - os **projetos online** (clique abre no navegador) e **Desligar todos**;
 - o **PHP do terminal**: a versão usada fora dos projetos (automática ou uma fixa);
@@ -52,5 +52,5 @@ ações principais.
 
 ## Iniciar com o Windows
 
-*Configurações › Geral*: com essa opção, o Sentinel abre direto na bandeja ao entrar no Windows. Ele
+*Configurações › Geral*: com essa opção, o Larafim abre direto na bandeja ao entrar no Windows. Ele
 usa a entrada do usuário em `HKCU\...\Run`, sem administrador.

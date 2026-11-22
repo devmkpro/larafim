@@ -51,14 +51,14 @@ jobs:
         working-directory: app
         run: npm run check
 
-      # O app embute a interface compilada e o sentinel-shim.exe: os dois
+      # O app embute a interface compilada e o larafim-shim.exe: os dois
       # precisam existir antes de compilar o Rust.
       - name: Interface compila
         working-directory: app
         run: npm run build
 
-      - name: sentinel-shim (release)
-        run: cargo build -p sentinel-shim --release --locked
+      - name: larafim-shim (release)
+        run: cargo build -p larafim-shim --release --locked
 
       - name: Clippy (sem avisos)
         run: cargo clippy --workspace --all-targets --locked -- -D warnings

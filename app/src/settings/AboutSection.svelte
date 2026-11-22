@@ -48,7 +48,7 @@
   });
 
   const links: { kind: ProjectLink; icon: "code" | "info" | "bug" | "shield" | "logs"; title: () => string; description: () => string }[] = [
-    { kind: "repo", icon: "code", title: () => t("Código-fonte"), description: () => "github.com/josevictoremiliano/sentinel" },
+    { kind: "repo", icon: "code", title: () => t("Código-fonte"), description: () => "github.com/josevictoremiliano/larafim" },
     { kind: "docs", icon: "logs", title: () => t("Documentação"), description: () => t("Guias de uso, desenvolvimento e segurança") },
     { kind: "issues", icon: "bug", title: () => t("Reportar um problema"), description: () => t("Abra uma issue no GitHub") },
     { kind: "security", icon: "shield", title: () => t("Segurança"), description: () => t("Reporte falhas de segurança de forma privada") },
@@ -59,7 +59,7 @@
 <div class="hero card">
   <Logo size={64} />
   <div class="who">
-    <strong>Sentinel</strong>
+    <strong>Larafim</strong>
     <span class="caption">{t("Versão {v}", { v: app.info?.version ?? status?.current ?? "" })}</span>
     <span class="caption">{t("PHP, Node e bancos locais para seus projetos no Windows.")}</span>
     <span class="caption author">

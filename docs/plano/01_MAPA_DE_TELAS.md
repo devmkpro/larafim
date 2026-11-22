@@ -1,4 +1,4 @@
-# Sentinel — Mapa de telas
+# Larafim — Mapa de telas
 Base: PLANO.md. Proposta de UX; MVP até fase 3, demais funcionalidades posteriores.
 
 ## Navegação

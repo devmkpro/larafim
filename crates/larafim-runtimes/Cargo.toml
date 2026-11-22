@@ -1,0 +1,23 @@
+[package]
+name = "larafim-runtimes"
+description = "Runtimes do Larafim: catálogo, download, instalação e atualização do PHP"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+larafim-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2"] }
+tokio = { version = "1", features = ["fs", "io-util", "rt", "process"] }
+sha2 = "0.11"
+hex = "0.4"
+zip = { version = "9", default-features = false, features = ["deflate"] }
+semver = "1"
+
+[dev-dependencies]
+tempfile.workspace = true
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

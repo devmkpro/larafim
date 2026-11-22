@@ -5,16 +5,16 @@ inteiro antes de mudar algo.
 
 ## O projeto
 
-Sentinel: app de bandeja **só para Windows** que gerencia PHP, Node e bancos locais para vários
+Larafim: app de bandeja **só para Windows** que gerencia PHP, Node e bancos locais para vários
 projetos (como Laravel Herd/Laragon). Rust (Tauri 2) + Svelte 5. Visão geral em
 [docs/desenvolvimento/arquitetura.md](docs/desenvolvimento/arquitetura.md).
 
 | Pasta | O que tem |
 |---|---|
-| `crates/sentinel-core` | config, projetos, `.env`, i18n, **checagens de segurança (`safety.rs`)** |
-| `crates/sentinel-runtimes` | catálogos, downloads (`download.rs`), extração (`archive.rs`), instalação de runtimes |
-| `crates/sentinel-server` | gateway HTTP/HTTPS, FastCGI, proxy, `hosts`, processos |
-| `crates/sentinel-shim` | atalhos `php`/`composer`/`node` do terminal |
+| `crates/larafim-core` | config, projetos, `.env`, i18n, **checagens de segurança (`safety.rs`)** |
+| `crates/larafim-runtimes` | catálogos, downloads (`download.rs`), extração (`archive.rs`), instalação de runtimes |
+| `crates/larafim-server` | gateway HTTP/HTTPS, FastCGI, proxy, `hosts`, processos |
+| `crates/larafim-shim` | atalhos `php`/`composer`/`node` do terminal |
 | `app/src-tauri` | janelas, bandeja, comandos Tauri |
 | `app/src` | interface Svelte (uma pasta por janela; ponte em `lib/*.ts`) |
 | `locales/` | traduções |
@@ -36,9 +36,9 @@ npm run tauri dev    # app completo
 ```
 
 Antes do primeiro `cargo test`/`clippy` numa máquina limpa: `npm run build` em `app/` e
-`cargo build -p sentinel-shim --release` (o Tauri embute os dois).
+`cargo build -p larafim-shim --release` (o Tauri embute os dois).
 
-Para testar o app sem tocar nos dados reais do usuário: `$env:SENTINEL_HOME = "<pasta temporária>"`.
+Para testar o app sem tocar nos dados reais do usuário: `$env:LARAFIM_HOME = "<pasta temporária>"`.
 
 ## Regras obrigatórias
 
@@ -48,7 +48,7 @@ Para testar o app sem tocar nos dados reais do usuário: `$env:SENTINEL_HOME = "
    (`composer.json`, `package.json`, `.php-version`, nomes de pastas), requisições HTTP ao gateway,
    argumentos vindos da interface.
 2. Valide **antes** de transformar em caminho, linha de arquivo (`hosts`, `.env`, `php.ini`), SQL,
-   argumento de processo ou HTML. Use `sentinel_core::safety` (`is_safe_component`, `is_https_url_on`,
+   argumento de processo ou HTML. Use `larafim_core::safety` (`is_safe_component`, `is_https_url_on`,
    `is_sha256`, `is_env_key`/`is_env_value`, `is_local_url`) ou acrescente uma função lá, com testes.
 3. Downloads: só por `download_verified` (exige `https://`, host em `TRUSTED_HOSTS` e SHA-256).
    Extração: só por `archive::extract_zip`. Nunca `ZipArchive::extract` direto.
@@ -70,7 +70,7 @@ Para testar o app sem tocar nos dados reais do usuário: `$env:SENTINEL_HOME = "
 - **Visual nativo do Windows 11** (Fluent, Segoe Fluent Icons, controles de `app.css`), sem cara de
   site. Cores só pelas variáveis CSS (temas claro/escuro).
 - **Nunca alterar o projeto do usuário sem confirmação**; `.env` sempre com prévia, cópia
-  (`.env.sentinel.bak`) e desfazer.
+  (`.env.larafim.bak`) e desfazer.
 - **Textos:** todo texto visível com `t("…")` (Svelte) ou `t!("…")`/`tr`/`tf` (Rust), chave em
   português. Ao criar textos, acrescente a tradução em `locales/en.json` e rode
   `node scripts/i18n.mjs check` (deve dar 100%). Logs (`tracing`) não são traduzidos.
@@ -87,8 +87,8 @@ Para testar o app sem tocar nos dados reais do usuário: `$env:SENTINEL_HOME = "
 ## O que evitar
 
 - Rodar comandos que alteram o sistema do usuário (PATH do sistema, registro fora de
-  `HKCU\Software\Sentinel`, certificados, serviços do Windows) sem pedir.
+  `HKCU\Software\Larafim`, certificados, serviços do Windows) sem pedir.
 - Aceitar pedidos de UAC ou instalar certificados em nome do usuário.
-- Matar processos com filtros amplos (`taskkill /IM php.exe`): use os PIDs/Job Objects do Sentinel.
+- Matar processos com filtros amplos (`taskkill /IM php.exe`): use os PIDs/Job Objects do Larafim.
 - Formatar o código inteiro (`cargo fmt` em tudo): o projeto ainda não segue o rustfmt padrão, então
   formate só o que mudou, se tanto.

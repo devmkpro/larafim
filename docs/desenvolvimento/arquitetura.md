@@ -1,6 +1,6 @@
 # Arquitetura
 
-O Sentinel é um app [Tauri 2](https://tauri.app): o núcleo é Rust e a interface é
+O Larafim é um app [Tauri 2](https://tauri.app): o núcleo é Rust e a interface é
 [Svelte 5](https://svelte.dev), rodando no WebView2 do Windows. **Princípio nº 1: leveza.** Nada sobe
 sem necessidade, e na bandeja o app ocupa cerca de 10 MB.
 
@@ -17,10 +17,10 @@ sem necessidade, e na bandeja o app ocupa cerca de 10 MB.
 │  │  └─ lib/               componentes e a ponte com o Rust (api.ts, *.ts)
 │  └─ src-tauri/            núcleo do app: janelas, bandeja, comandos chamados pela interface
 ├─ crates/
-│  ├─ sentinel-core/        caminhos, config.toml, projects.toml, detecção de projetos, .env, i18n, checagens de segurança
-│  ├─ sentinel-runtimes/    catálogos e instalação: PHP, Node, MariaDB, PostgreSQL, Mailpit, RustFS, Xdebug, Composer, Adminer
-│  ├─ sentinel-server/      gateway HTTP/HTTPS, FastCGI, pools de php-cgi, proxy do Node, hosts, portas, processos
-│  └─ sentinel-shim/        atalhos de terminal (php.exe, composer.exe, node.exe, npm.exe, npx.exe)
+│  ├─ larafim-core/        caminhos, config.toml, projects.toml, detecção de projetos, .env, i18n, checagens de segurança
+│  ├─ larafim-runtimes/    catálogos e instalação: PHP, Node, MariaDB, PostgreSQL, Mailpit, RustFS, Xdebug, Composer, Adminer
+│  ├─ larafim-server/      gateway HTTP/HTTPS, FastCGI, pools de php-cgi, proxy do Node, hosts, portas, processos
+│  └─ larafim-shim/        atalhos de terminal (php.exe, composer.exe, node.exe, npm.exe, npx.exe)
 ├─ locales/                 textos traduzidos (um JSON por idioma)
 ├─ scripts/i18n.mjs         ferramentas de tradução
 └─ docs/                    esta documentação
@@ -29,9 +29,9 @@ sem necessidade, e na bandeja o app ocupa cerca de 10 MB.
 ### Quem depende de quem
 
 ```
-sentinel-core ─┬─ sentinel-runtimes ─┬─ app/src-tauri
-               ├─ sentinel-server ───┘
-               └─ sentinel-shim  (usa core + runtimes; vai junto no instalador)
+larafim-core ─┬─ larafim-runtimes ─┬─ app/src-tauri
+               ├─ larafim-server ───┘
+               └─ larafim-shim  (usa core + runtimes; vai junto no instalador)
 ```
 
 Os crates não conhecem o Tauri: tudo que é lógica testável fica neles. O `app/src-tauri` só liga as
@@ -53,7 +53,7 @@ Fechar todas as janelas não encerra o app: ele continua na bandeja (opção *ma
 ## Dados em disco
 
 ```
-%LOCALAPPDATA%\Sentinel\          (ou SENTINEL_HOME)
+%LOCALAPPDATA%\Larafim\          (ou LARAFIM_HOME)
 ├─ config.toml                    preferências (senhas só cifradas com DPAPI)
 ├─ projects.toml                  projetos importados
 ├─ runtimes\php\<versão>\  node\  mariadb\  postgres\  rustfs\  mailpit\  composer\  adminer\
@@ -82,15 +82,15 @@ na hora pela CA local.
 ## Processos
 
 - `php-cgi`, servidores de dev do Node, workers e serviços rodam dentro de **Job Objects** do
-  Windows: se o Sentinel fechar ou travar, o Windows encerra toda a árvore de processos. Nada fica
+  Windows: se o Larafim fechar ou travar, o Windows encerra toda a árvore de processos. Nada fica
   órfão.
 - MariaDB e PostgreSQL desligam com o comando de *shutdown* de cada um, sem perder dados.
 
 ## Elevação (administrador)
 
-O Sentinel roda **sem administrador**. A única exceção é gravar o arquivo `hosts`: o próprio
+O Larafim roda **sem administrador**. A única exceção é gravar o arquivo `hosts`: o próprio
 executável é aberto elevado (UAC) com um argumento especial, lê a lista pedida, **revalida tudo** e
-grava só o bloco do Sentinel. Veja [Segurança](../seguranca.md#arquivo-hosts).
+grava só o bloco do Larafim. Veja [Segurança](../seguranca.md#arquivo-hosts).
 
 ## Interface
 
@@ -102,7 +102,7 @@ grava só o bloco do Sentinel. Veja [Segurança](../seguranca.md#arquivo-hosts).
 
 ## Outras plataformas
 
-Hoje o Sentinel é só para Windows. Partes que precisariam de versão para macOS/Linux:
+Hoje o Larafim é só para Windows. Partes que precisariam de versão para macOS/Linux:
 
 | Parte | No Windows | Equivalente |
 |---|---|---|

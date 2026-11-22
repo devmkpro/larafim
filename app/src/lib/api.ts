@@ -60,8 +60,8 @@ const mock = {
   saveConfig: async (config: AppConfig) => (mockConfig = { ...config }),
   appInfo: async (): Promise<AppInfo> => ({
     version: "0.1.0",
-    data_dir: "C:\\Users\\voce\\AppData\\Local\\Sentinel",
-    logs_dir: "C:\\Users\\voce\\AppData\\Local\\Sentinel\\logs",
+    data_dir: "C:\\Users\\voce\\AppData\\Local\\Larafim",
+    logs_dir: "C:\\Users\\voce\\AppData\\Local\\Larafim\\logs",
   }),
   openDataDir: async () => {},
   openFolder: async (_path: string) => {},

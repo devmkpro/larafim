@@ -120,7 +120,7 @@
     {/each}
   </div>
   <p class="tip caption">
-    {t("No terminal,")} <span class="mono">node</span>, <span class="mono">npm</span> e <span class="mono">npx</span> {t("usam a versão da pasta (Configurações › Terminal). Para forçar:")} <span class="mono">$env:SENTINEL_NODE = "22"</span>.
+    {t("No terminal,")} <span class="mono">node</span>, <span class="mono">npm</span> e <span class="mono">npx</span> {t("usam a versão da pasta (Configurações › Terminal). Para forçar:")} <span class="mono">$env:LARAFIM_NODE = "22"</span>.
   </p>
 {:else if loading}
   <div class="loading"><ProgressBar /></div>

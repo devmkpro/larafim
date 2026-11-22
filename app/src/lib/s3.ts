@@ -26,7 +26,7 @@ let mockStatus: S3Status = {
   installing: false,
   console_url: "http://s3.offline",
   endpoint: "http://127.0.0.1:9000",
-  access_key: "sentinel",
+  access_key: "larafim",
 };
 
 const mock = {

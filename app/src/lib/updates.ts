@@ -1,4 +1,4 @@
-// Versões novas do Sentinel (última release no GitHub) e links do projeto.
+// Versões novas do Larafim (última release no GitHub) e links do projeto.
 import { invoke } from "@tauri-apps/api/core";
 import { inTauri, mockEmit } from "./api";
 

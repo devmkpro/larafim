@@ -43,7 +43,7 @@
 
 <h1>{t("Terminal")}</h1>
 <p class="lead caption">
-  {t("Os comandos")} <span class="mono">php</span> e <span class="mono">composer</span> {t("do Sentinel escolhem sozinhos a versão do PHP de cada pasta: dentro do projeto da loja, PHP 8.4; dentro do blog, PHP 8.1.")}
+  {t("Os comandos")} <span class="mono">php</span> e <span class="mono">composer</span> {t("do Larafim escolhem sozinhos a versão do PHP de cada pasta: dentro do projeto da loja, PHP 8.4; dentro do blog, PHP 8.1.")}
 </p>
 
 {#if error}
@@ -76,9 +76,9 @@
     <div class="infobar warn">
       <Glyph name="info" />
       <div>
-        <strong>{t("Outro php.exe vem antes do Sentinel.")}</strong>
+        <strong>{t("Outro php.exe vem antes do Larafim.")}</strong>
         <p class="caption">
-          {t("O Windows procura primeiro no PATH do sistema, então estes serão usados no lugar do Sentinel. Tire-os do PATH do sistema (Laragon, XAMPP…) ou use o botão \"Abrir terminal\" do projeto, que já abre com o Sentinel na frente.")}
+          {t("O Windows procura primeiro no PATH do sistema, então estes serão usados no lugar do Larafim. Tire-os do PATH do sistema (Laragon, XAMPP…) ou use o botão \"Abrir terminal\" do projeto, que já abre com o Larafim na frente.")}
         </p>
         <ul class="mono">
           {#each status.conflicts as c (c)}<li>{c}</li>{/each}
@@ -119,7 +119,7 @@
 
   <p class="tip caption">
     {t("Dica: para forçar uma versão só no terminal atual, use")}
-    <span class="mono">$env:SENTINEL_PHP = "8.3"</span> {t("(PowerShell) ou")} <span class="mono">set SENTINEL_PHP=8.3</span> {t("(cmd).")}
+    <span class="mono">$env:LARAFIM_PHP = "8.3"</span> {t("(PowerShell) ou")} <span class="mono">set LARAFIM_PHP=8.3</span> {t("(cmd).")}
   </p>
 {:else}
   <p class="caption">{t("Carregando…")}</p>

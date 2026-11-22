@@ -1,15 +1,15 @@
 //! Storage S3 local (fase 8): RustFS sob demanda. API em 127.0.0.1:9000,
 //! painel em s3.<domínio> (proxy para 127.0.0.1:9001), um bucket por projeto.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::hash::{BuildHasher, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-use sentinel_core::envfile::{self, DiffLine, EnvChange};
-use sentinel_runtimes::{http_client, s3};
-use sentinel_server::DevSpec;
+use larafim_core::envfile::{self, DiffLine, EnvChange};
+use larafim_runtimes::{http_client, s3};
+use larafim_server::DevSpec;
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -21,7 +21,7 @@ type CmdResult<T> = Result<T, String>;
 pub const S3_KEY: &str = "service:rustfs";
 pub const S3_API_PORT: u16 = 9000;
 pub const S3_CONSOLE_PORT: u16 = 9001;
-pub const S3_ACCESS: &str = "sentinel";
+pub const S3_ACCESS: &str = "larafim";
 
 pub fn s3_running(app: &AppHandle) -> bool {
     app.state::<ServerState>().dev.is_running(S3_KEY)
@@ -141,7 +141,7 @@ pub async fn start_s3(app: &AppHandle) -> Result<(), String> {
         return Err(t!("o storage S3 não está instalado (Configurações › Serviços)"));
     }
     for port in [S3_API_PORT, S3_CONSOLE_PORT] {
-        if let Err(owner) = sentinel_server::port::check_free(port) {
+        if let Err(owner) = larafim_server::port::check_free(port) {
             let who = owner.map(|o| o.name).unwrap_or_else(|| t!("outro programa"));
             return Err(t!("a porta {port} (storage S3) está ocupada por {who}", port = port, who = who));
         }

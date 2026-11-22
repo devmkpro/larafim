@@ -1,18 +1,18 @@
 //! Serviços (fase 6): MariaDB sob demanda, bancos por projeto, `.env`,
 //! backups e Adminer em `db.<domínio>`.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use sentinel_core::envfile::{self, DiffLine, EnvChange};
-use sentinel_core::store::same_path;
-use sentinel_runtimes::mariadb::{self, MariaEntry};
-use sentinel_runtimes::{extras, http_client};
-use sentinel_server::mariadb::{MariaError, MariaService, MariaSetup, MariaStatus, database_name};
+use larafim_core::envfile::{self, DiffLine, EnvChange};
+use larafim_core::store::same_path;
+use larafim_runtimes::mariadb::{self, MariaEntry};
+use larafim_runtimes::{extras, http_client};
+use larafim_server::mariadb::{MariaError, MariaService, MariaSetup, MariaStatus, database_name};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -90,7 +90,7 @@ fn own_service(app: &AppHandle, path: &Path) -> Arc<MariaService> {
         .clone()
 }
 
-pub(crate) fn own_of(cfg: &sentinel_core::ProjectConfig) -> Option<OwnDb> {
+pub(crate) fn own_of(cfg: &larafim_core::ProjectConfig) -> Option<OwnDb> {
     Some(OwnDb { version: cfg.db_version.clone()?, port: cfg.db_port? })
 }
 
@@ -116,7 +116,7 @@ pub async fn stop_own(app: &AppHandle, path: &Path) {
     let _ = app.emit("services-changed", ());
 }
 
-/// Ao sair do Sentinel: desliga todos os servidores próprios.
+/// Ao sair do Larafim: desliga todos os servidores próprios.
 pub async fn stop_all_own(app: &AppHandle) {
     let all: Vec<Arc<MariaService>> = app.state::<ServicesState>().own.lock().unwrap().values().cloned().collect();
     for s in all {
@@ -152,14 +152,14 @@ fn reserved_ports(app: &AppHandle, except: Option<&Path>) -> Vec<u16> {
     ports
 }
 
-/// Reescreve a entrada do Adminer com as portas dos MariaDB do Sentinel.
+/// Reescreve a entrada do Adminer com as portas dos MariaDB do Larafim.
 pub fn refresh_adminer(app: &AppHandle) {
     let ports = reserved_ports(app, None);
     let pg = crate::pg::pg_port(app);
     let _ = extras::write_adminer_index(&app.state::<AppState>().paths, &ports, &[pg]);
 }
 
-/// Portas de todos os MariaDB do Sentinel (compartilhado primeiro).
+/// Portas de todos os MariaDB do Larafim (compartilhado primeiro).
 pub fn maria_ports(app: &AppHandle) -> Vec<u16> {
     reserved_ports(app, None)
 }
@@ -169,7 +169,7 @@ pub fn maria_ports(app: &AppHandle) -> Vec<u16> {
 pub fn suggest_own_port(app: AppHandle, path: PathBuf) -> u16 {
     let reserved = reserved_ports(&app, Some(&path));
     (3310..3400)
-        .find(|p| !reserved.contains(p) && sentinel_server::port::check_free(*p).is_ok())
+        .find(|p| !reserved.contains(p) && larafim_server::port::check_free(*p).is_ok())
         .unwrap_or(3399)
 }
 
@@ -218,7 +218,7 @@ pub fn maria_setup(app: &AppHandle) -> Result<MariaSetup, String> {
 fn maria_err(e: MariaError) -> String {
     match e {
         MariaError::PortBusy(p) => {
-            let who = sentinel_server::port::listener_on(p)
+            let who = larafim_server::port::listener_on(p)
                 .map(|o| match o.hint {
                     Some(h) => format!("{} ({h})", o.name),
                     None => o.name,
@@ -328,7 +328,7 @@ pub async fn services_overview(app: AppHandle, refresh: Option<bool>) -> CmdResu
         let c = app_state.config.lock().unwrap();
         (c.db_port, c.db_version.clone())
     };
-    let own_cfgs: Vec<sentinel_core::ProjectConfig> = app_state
+    let own_cfgs: Vec<larafim_core::ProjectConfig> = app_state
         .projects
         .lock()
         .unwrap()
@@ -417,7 +417,7 @@ pub async fn maria_install(app: AppHandle, major: String) -> CmdResult<()> {
             if let Err(e) = extras::ensure_adminer(&client, &paths, &[port], &[pg]).await {
                 tracing::warn!("Adminer não baixado: {e}");
             }
-            Ok::<(), sentinel_runtimes::Error>(())
+            Ok::<(), larafim_runtimes::Error>(())
         }
         .await;
         app.state::<ServicesState>().installing.lock().unwrap().remove(&major);
@@ -479,7 +479,7 @@ pub async fn maria_configure(app: AppHandle, version: Option<String>, port: u16)
 
 // ---------- Banco por projeto ----------
 
-pub(crate) fn project_config(app: &AppHandle, path: &Path) -> Result<sentinel_core::ProjectConfig, String> {
+pub(crate) fn project_config(app: &AppHandle, path: &Path) -> Result<larafim_core::ProjectConfig, String> {
     app.state::<AppState>()
         .projects
         .lock()
@@ -489,7 +489,7 @@ pub(crate) fn project_config(app: &AppHandle, path: &Path) -> Result<sentinel_co
         .ok_or_else(|| t!("importe o projeto antes"))
 }
 
-fn save_project_cfg(app: &AppHandle, cfg: &sentinel_core::ProjectConfig) -> Result<(), String> {
+fn save_project_cfg(app: &AppHandle, cfg: &larafim_core::ProjectConfig) -> Result<(), String> {
     let state = app.state::<AppState>();
     let mut store = state.projects.lock().unwrap();
     if let Some(p) = store.projects.iter_mut().find(|p| same_path(&p.path, &cfg.path)) {
@@ -568,11 +568,11 @@ fn changes_for(app: &AppHandle, project: &Path, domain: &str, kind: &str, own: O
     })
 }
 
-/// Cliente do banco de um projeto (MariaDB do Sentinel ou conexão externa).
+/// Cliente do banco de um projeto (MariaDB do Larafim ou conexão externa).
 async fn client_for_project(
     app: &AppHandle,
-    cfg: &sentinel_core::ProjectConfig,
-) -> Result<sentinel_server::dbclient::DbClient, String> {
+    cfg: &larafim_core::ProjectConfig,
+) -> Result<larafim_server::dbclient::DbClient, String> {
     match cfg.database.as_deref() {
         Some("mariadb-own") => {
             start_own(app, &cfg.path).await?;
@@ -635,7 +635,7 @@ pub async fn project_db_apply(app: AppHandle, path: PathBuf, kind: String, own: 
         "mariadb-own" => {
             let own = own.clone().ok_or_else(|| t!("escolha a versão e a porta do MariaDB próprio"))?;
             if own.port < 1024 || reserved_ports(&app, Some(&path)).contains(&own.port) {
-                return Err(t!("a porta {a} já é usada por outro banco do Sentinel", a = own.port));
+                return Err(t!("a porta {a} já é usada por outro banco do Larafim", a = own.port));
             }
             // Versão/porta mudaram: o servidor antigo do projeto é desligado.
             if own_of(&cfg).is_some_and(|o| o.version != own.version || o.port != own.port) {
@@ -669,7 +669,7 @@ pub async fn project_db_apply(app: AppHandle, path: PathBuf, kind: String, own: 
         }
         "none" => {}
         k if k.starts_with("external:") => {
-            let probe = sentinel_core::ProjectConfig { database: Some(k.to_string()), ..cfg.clone() };
+            let probe = larafim_core::ProjectConfig { database: Some(k.to_string()), ..cfg.clone() };
             client_for_project(&app, &probe)
                 .await?
                 .create_database(&database_name(&cfg.domain))
@@ -829,8 +829,8 @@ pub async fn open_adminer(
         refresh_adminer(&app);
     }
     // Servidor externo: o Adminer abre com servidor e usuário preenchidos
-    // (a senha é digitada lá). O do Sentinel entra sozinho.
-    // "postgres" = o PostgreSQL do Sentinel.
+    // (a senha é digitada lá). O do Larafim entra sozinho.
+    // "postgres" = o PostgreSQL do Larafim.
     let postgres = connection.as_deref() == Some("postgres");
     let external = match connection.filter(|c| c != "postgres") {
         Some(id) => Some(crate::dbconn::find(&app, &id)?),

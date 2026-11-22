@@ -1,12 +1,12 @@
 //! Bancos que já existem no PC (MySQL/MariaDB do Laragon, XAMPP…):
 //! cadastrar, testar, detectar e usar nos projetos.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::path::{Path, PathBuf};
 
-use sentinel_core::DbConnection;
-use sentinel_runtimes::mariadb;
-use sentinel_server::dbclient::{DbClient, has_client};
+use larafim_core::DbConnection;
+use larafim_runtimes::mariadb;
+use larafim_server::dbclient::{DbClient, has_client};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -55,19 +55,19 @@ pub fn find(app: &AppHandle, id: &str) -> Result<DbConnection, String> {
 }
 
 /// Programas de linha de comando para falar com o servidor: os do próprio
-/// servidor (MySQL) ou os do MariaDB do Sentinel.
+/// servidor (MySQL) ou os do MariaDB do Larafim.
 fn client_dir(app: &AppHandle, kind: &str, own: Option<&Path>) -> Option<PathBuf> {
-    let sentinel = mariadb::list_installed(&app.state::<AppState>().paths.mariadb_dir())
+    let larafim = mariadb::list_installed(&app.state::<AppState>().paths.mariadb_dir())
         .first()
         .map(|m| m.dir.join("bin"));
     let own = own.filter(|d| has_client(d)).map(Path::to_path_buf);
-    let order = if kind == "mysql" { [own, sentinel] } else { [sentinel, own] };
+    let order = if kind == "mysql" { [own, larafim] } else { [larafim, own] };
     order.into_iter().flatten().find(|d| has_client(d))
 }
 
 pub fn client_for(app: &AppHandle, c: &DbConnection) -> Result<DbClient, String> {
     let bin_dir = client_dir(app, &c.kind, c.client_dir.as_deref()).ok_or_else(|| 
-        t!("não achei os programas mysql/mysqldump desse servidor. Informe a pasta deles na conexão ou instale o MariaDB do Sentinel (só para ter as ferramentas)."),
+        t!("não achei os programas mysql/mysqldump desse servidor. Informe a pasta deles na conexão ou instale o MariaDB do Larafim (só para ter as ferramentas)."),
     )?;
     Ok(DbClient {
         bin_dir,
@@ -200,14 +200,14 @@ pub struct DetectedDb {
 }
 
 /// Procura MySQL/MariaDB escutando nas portas comuns (3306–3310), sem contar
-/// o MariaDB do próprio Sentinel.
+/// o MariaDB do próprio Larafim.
 #[tauri::command]
 pub async fn db_detect(app: AppHandle) -> Vec<DetectedDb> {
     let own_pid = app.state::<crate::services::ServicesState>().maria.status().await.pid;
     let known: Vec<u16> = app.state::<AppState>().config.lock().unwrap().db_connections.iter().map(|c| c.port).collect();
     (3306..=3310)
         .filter_map(|port| {
-            let owner = sentinel_server::port::listener_on(port)?;
+            let owner = larafim_server::port::listener_on(port)?;
             if Some(owner.pid) == own_pid {
                 return None;
             }
@@ -219,7 +219,7 @@ pub async fn db_detect(app: AppHandle) -> Vec<DetectedDb> {
             } else {
                 return None;
             };
-            let client_dir = sentinel_server::port::process_path(owner.pid)
+            let client_dir = larafim_server::port::process_path(owner.pid)
                 .and_then(|p| p.parent().map(Path::to_path_buf))
                 .filter(|d| has_client(d));
             Some(DetectedDb {

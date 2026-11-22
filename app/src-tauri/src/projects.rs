@@ -1,11 +1,11 @@
 //! Comandos de projetos: listar, importar, editar, remover e ignorar.
 //! Tudo fica em `projects.toml`; nada é escrito nas pastas dos projetos.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::path::PathBuf;
 
-use sentinel_core::projects::{detect_any, docroot_options};
-use sentinel_core::{ProjectConfig, ProjectView, ProjectsFile};
+use larafim_core::projects::{detect_any, docroot_options};
+use larafim_core::{ProjectConfig, ProjectView, ProjectsFile};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, State};
 
@@ -34,7 +34,7 @@ fn overview(state: &AppState) -> CmdResult<ProjectsOverview> {
 fn change(
     app: &AppHandle,
     state: &AppState,
-    f: impl FnOnce(&mut ProjectsFile, &[PathBuf]) -> sentinel_core::Result<()>,
+    f: impl FnOnce(&mut ProjectsFile, &[PathBuf]) -> larafim_core::Result<()>,
 ) -> CmdResult<ProjectsOverview> {
     let roots = roots(state)?;
     {
@@ -76,7 +76,7 @@ pub fn import_all(app: AppHandle, state: State<'_, AppState>) -> CmdResult<Proje
         let new: Vec<PathBuf> = store
             .views(roots)
             .into_iter()
-            .filter(|v| v.status == sentinel_core::ProjectStatus::New)
+            .filter(|v| v.status == larafim_core::ProjectStatus::New)
             .map(|v| v.path)
             .collect();
         for path in new {
@@ -107,7 +107,7 @@ pub fn save_project(app: AppHandle, state: State<'_, AppState>, config: ProjectC
     Ok(data)
 }
 
-/// Tira do Sentinel. Os arquivos do projeto não são apagados.
+/// Tira do Larafim. Os arquivos do projeto não são apagados.
 #[tauri::command]
 pub fn remove_project(app: AppHandle, state: State<'_, AppState>, path: PathBuf) -> CmdResult<ProjectsOverview> {
     let data = change(&app, &state, |store, roots| {
@@ -134,11 +134,11 @@ pub fn unignore_project(app: AppHandle, state: State<'_, AppState>, path: PathBu
     })
 }
 
-/// Para o diálogo de projeto avulso: o que o Sentinel entende da pasta.
+/// Para o diálogo de projeto avulso: o que o Larafim entende da pasta.
 #[derive(Serialize)]
 pub struct FolderProposal {
     config: ProjectConfig,
-    view_kind: sentinel_core::ProjectKind,
+    view_kind: larafim_core::ProjectKind,
     recognized: bool,
     php_request: Option<String>,
     has_node: bool,
@@ -150,16 +150,16 @@ pub struct FolderProposal {
 pub fn inspect_folder(state: State<'_, AppState>, path: PathBuf) -> CmdResult<FolderProposal> {
     let d = detect_any(&path).ok_or_else(|| t!("a pasta {a} não existe", a = path.display()))?;
     let parent = path.parent().map(PathBuf::from).unwrap_or_default();
-    let recognized = sentinel_core::projects::detect(&path, &parent).is_some();
+    let recognized = larafim_core::projects::detect(&path, &parent).is_some();
     let store = state.projects.lock().map_err(|e| e.to_string())?;
     let used: Vec<String> = store.projects.iter().map(|p| p.domain.clone()).collect();
     Ok(FolderProposal {
         config: ProjectConfig {
             path: path.clone(),
-            domain: sentinel_core::store::unique_domain(&d.domain, &used),
+            domain: larafim_core::store::unique_domain(&d.domain, &used),
             php: None,
             docroot: d.docroot.clone(),
-            node: d.kind == sentinel_core::ProjectKind::Node && d.node_command.is_some(),
+            node: d.kind == larafim_core::ProjectKind::Node && d.node_command.is_some(),
             node_command: d.node_command.clone(),
             node_version: None,
             database: None,

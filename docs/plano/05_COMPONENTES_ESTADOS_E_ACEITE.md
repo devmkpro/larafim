@@ -1,4 +1,4 @@
-# Sentinel — Design system funcional e critérios de aceite
+# Larafim — Design system funcional e critérios de aceite
 
 ## Componentes reutilizáveis
 AppShell; Sidebar; PageHeader; ProjectRow; StatusIndicator; RuntimeSelector; ServiceCard; ProgressOperation; ConfirmDialog; ErrorPanel; EmptyState; PathPicker; PortInput; CopyableUrl; EnvDiffPreview; LogViewer; TerminalPanel; ResourceMeter; Toast; StepWizard.

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Marca do Sentinel (versão simples de app/app-icon.svg, sem textura nem
+  // Marca do Larafim (versão simples de app/app-icon.svg, sem textura nem
   // sombra, para ficar nítida em tamanhos pequenos).
   let { size = 16 }: { size?: number } = $props();
 </script>

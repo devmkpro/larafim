@@ -44,7 +44,7 @@
         const lines = diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? t("(comentada)")}`).join("\n");
         const ok = await confirm(
           t("Usar o Mailpit? Os e-mails do projeto vão para a caixa local (mail.{tld}).", { tld: app.config?.tld ?? "" }) +
-            (lines ? "\n\n" + t("Mudanças no .env (com cópia em .env.sentinel.bak):") + "\n" + lines : ""),
+            (lines ? "\n\n" + t("Mudanças no .env (com cópia em .env.larafim.bak):") + "\n" + lines : ""),
           t("E-mail do projeto"),
           t("Aplicar"),
         );
@@ -80,7 +80,7 @@
           : "";
         const ok = await confirm(
           t('Usar o storage S3 local? O bucket "{bucket}" será criado.', { bucket: pv.bucket }) +
-            (lines ? "\n\n" + t("Mudanças no .env (com cópia em .env.sentinel.bak):") + "\n" + lines : "") +
+            (lines ? "\n\n" + t("Mudanças no .env (com cópia em .env.larafim.bak):") + "\n" + lines : "") +
             pkg,
           t("Storage do projeto"),
           t("Aplicar"),
@@ -207,9 +207,9 @@
   async function removeProject() {
     if (!project) return;
     const ok = await confirm(
-      t('Tirar "{name}" do Sentinel? Os arquivos do projeto NÃO são apagados.', { name: project.name }) +
+      t('Tirar "{name}" do Larafim? Os arquivos do projeto NÃO são apagados.', { name: project.name }) +
         (project.root ? " " + t("Ele deixa de aparecer na lista; dá para mostrar de novo em Configurações › Pastas de projetos.") : ""),
-      t("Remover do Sentinel"),
+      t("Remover do Larafim"),
       t("Remover"),
     );
     if (ok) act(projectsApi.remove(project.path));
@@ -278,7 +278,7 @@
         <span>{t("A pasta deste projeto não existe mais (foi movida, renomeada ou apagada).")}</span>
       </div>
       <div class="buttons">
-        <button class="btn" onclick={removeProject}>{t("Remover do Sentinel")}</button>
+        <button class="btn" onclick={removeProject}>{t("Remover do Larafim")}</button>
       </div>
     {:else}
       <div class="status card" class:is-on={project.online}>
@@ -518,7 +518,7 @@
       <div class="footer">
         <button class="btn subtle danger" onclick={removeProject}>
           <Glyph name="delete" />
-          {t("Remover do Sentinel")}
+          {t("Remover do Larafim")}
         </button>
       </div>
     {/if}

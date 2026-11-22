@@ -60,7 +60,7 @@
     <div class="content">
       <h2 id="conn-title">{initial.id ? t("Editar banco") : t("Usar um banco que já tenho")}</h2>
       <p class="caption">
-        {t("O Sentinel não liga nem desliga esse servidor: só cria bancos nele, ajusta o .env dos projetos e faz backups.")}
+        {t("O Larafim não liga nem desliga esse servidor: só cria bancos nele, ajusta o .env dos projetos e faz backups.")}
       </p>
 
       <label class="row"><span>{t("Nome")}</span><input class="input" bind:value={form.name} placeholder={t("MySQL do Laragon")} /></label>

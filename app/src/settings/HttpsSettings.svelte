@@ -45,12 +45,12 @@
 
   async function trust() {
     const ok = await confirm(
-      t('O Sentinel vai instalar a autoridade certificadora dele nas "Autoridades raiz confiáveis" do seu usuário.') +
+      t('O Larafim vai instalar a autoridade certificadora dele nas "Autoridades raiz confiáveis" do seu usuário.') +
         " " +
         t("Ela só consegue emitir certificados para domínios .{tld} (restrição gravada no próprio certificado).", { tld: app.config?.tld ?? "" }) +
         "\n\n" +
-        t('O Windows vai mostrar um aviso de segurança: confira que o nome começa com "Sentinel CA local" e confirme.'),
-      t("Confiar no certificado do Sentinel"),
+        t('O Windows vai mostrar um aviso de segurança: confira que o nome começa com "Larafim CA local" e confirme.'),
+      t("Confiar no certificado do Larafim"),
       "Continuar",
     );
     if (ok) run(https.trust);
@@ -58,7 +58,7 @@
 
   async function untrust() {
     const ok = await confirm(
-      t("Remover a autoridade do Sentinel das raízes confiáveis? Os endereços https:// dos projetos passam a mostrar aviso no navegador."),
+      t("Remover a autoridade do Larafim das raízes confiáveis? Os endereços https:// dos projetos passam a mostrar aviso no navegador."),
       t("Remover certificado"),
       t("Remover"),
     );
@@ -72,7 +72,7 @@
     title={t("HTTPS local")}
     description={status.enabled
       ? t("Projetos também em https://… na porta {port}", { port: status.port })
-      : t("Abre os projetos em https:// com certificado do próprio Sentinel")}
+      : t("Abre os projetos em https:// com certificado do próprio Larafim")}
   >
     <span class="caption">{status.enabled ? t("Ativado") : t("Desativado")}</span>
     <Toggle label={t("HTTPS local")} checked={status.enabled} disabled={busy} onchange={(v) => run(() => https.configure(v, Number(port)))} />
@@ -91,7 +91,7 @@
     </SettingRow>
     <SettingRow
       icon="link"
-      title={t("Certificado do Sentinel")}
+      title={t("Certificado do Larafim")}
       description={status.trusted
         ? t("Confiável neste usuário: Edge e Chrome abrem os projetos sem aviso")
         : t("Ainda não confiável: o navegador vai avisar que a conexão não é segura")}

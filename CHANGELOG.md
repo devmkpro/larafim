@@ -1,13 +1,13 @@
 # Novidades
 
-As versões do Sentinel e o que mudou em cada uma. O instalador de cada versão fica em
-[Releases](https://github.com/josevictoremiliano/sentinel/releases).
+As versões do Larafim e o que mudou em cada uma. O instalador de cada versão fica em
+[Releases](https://github.com/josevictoremiliano/larafim/releases).
 
 ## v0.1.0
 
 Primeira versão pública. 🎉
 
-O Sentinel monta o ambiente de desenvolvimento local para projetos **PHP, Laravel e Node** no
+O Larafim monta o ambiente de desenvolvimento local para projetos **PHP, Laravel e Node** no
 Windows: cada projeto no seu endereço (`http://loja.offline`), cada um com a sua versão de PHP, tudo
 ao mesmo tempo.
 
@@ -32,7 +32,7 @@ ao mesmo tempo.
 
 Downloads só de fontes oficiais e com SHA-256; extração de zip protegida (caminhos para fora da pasta,
 links simbólicos, zip bomb); validação do arquivo `hosts`, do `.env` e dos caminhos do servidor local;
-CSP estrita na interface. Detalhes em [docs/seguranca.md](https://github.com/josevictoremiliano/sentinel/blob/main/docs/seguranca.md).
+CSP estrita na interface. Detalhes em [docs/seguranca.md](https://github.com/josevictoremiliano/larafim/blob/main/docs/seguranca.md).
 
 ### Requisitos e limitações
 

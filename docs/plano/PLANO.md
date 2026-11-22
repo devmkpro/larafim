@@ -1,8 +1,8 @@
-# Sentinel — Plano do Projeto
+# Larafim — Plano do Projeto
 
 > Gerenciador local de ambientes de desenvolvimento (PHP, Node, MariaDB) para Windows, escrito em Rust.
 > Inspiração: Laragon e Laravel Herd — sem precisar baixar, descompactar e trocar versão de PHP na mão.
-> **Princípio nº 1: leveza.** O Sentinel não pode pesar no PC de quem usa. O foco é o projeto que a pessoa está desenvolvendo, não o Sentinel.
+> **Princípio nº 1: leveza.** O Larafim não pode pesar no PC de quem usa. O foco é o projeto que a pessoa está desenvolvendo, não o Larafim.
 
 ---
 
@@ -30,11 +30,11 @@ Um app desktop leve que:
 |---|---|---|
 | Interface | **Svelte 5** (no Tauri 2) | Compila para JS puro, sem runtime de Virtual DOM: bundle muito menor e menos memória que React. O maior custo de RAM de um app Tauri é o WebView2; o Svelte ajuda a não somar nada em cima disso. |
 | Banco | **MariaDB 11.8 LTS**, em modo leve e sob demanda | Mais leve parado que o MySQL (~80–150 MB contra ~350–450 MB do MySQL com as opções padrão) e compatível com ele: mesmo SQL, mesmos clientes, `pdo_mysql` e `mysqli` funcionam igual. No Laravel dá para usar `DB_CONNECTION=mariadb` (Laravel 11+) ou `mysql`. **Só sobe quando for usado.** |
-| Bancos extras | **PostgreSQL** e storage S3 (**RustFS**) como download opcional | Não vêm instalados; a pessoa baixa pelo Sentinel se precisar e liga por projeto (seção 5). |
-| Domínio | **`.offline`** | Diferencia o Sentinel de Herd/Valet/Laragon (todos usam `.test`), evitando choque entre programas. Verificado: `.offline` **não** é TLD público (lista da IANA de 20/11/2026), então não colide com sites reais. |
-| Config. do projeto | **Fica no Sentinel, não no repositório** | Ninguém quer um arquivo do Sentinel aparecendo no GitHub. Detalhes na seção 4.1. |
+| Bancos extras | **PostgreSQL** e storage S3 (**RustFS**) como download opcional | Não vêm instalados; a pessoa baixa pelo Larafim se precisar e liga por projeto (seção 5). |
+| Domínio | **`.offline`** | Diferencia o Larafim de Herd/Valet/Laragon (todos usam `.test`), evitando choque entre programas. Verificado: `.offline` **não** é TLD público (lista da IANA de 20/11/2026), então não colide com sites reais. |
+| Config. do projeto | **Fica no Larafim, não no repositório** | Ninguém quer um arquivo do Larafim aparecendo no GitHub. Detalhes na seção 4.1. |
 
-### `my.ini` do MariaDB em modo leve (padrão do Sentinel)
+### `my.ini` do MariaDB em modo leve (padrão do Larafim)
 ```ini
 performance_schema = OFF
 innodb_buffer_pool_size = 64M
@@ -63,12 +63,12 @@ Ajustável na tela do banco ("Modo leve" / "Modo padrão"). Os números de memó
   | `package.json` | tem Node → script `dev` disponível? |
   | `.nvmrc` / `engines.node` | versão de Node |
 - **Tela de importação**: mostra em destaque a URL **`http://nome-do-projeto.offline`** (clicável e copiável) e permite confirmar ou alterar: versão do PHP, docroot, domínio, se usa Node, comando do Node e banco de dados.
-- **Online/Offline** por projeto (checkbox). Estado salvo; ao abrir o Sentinel, só os marcados como Online sobem.
+- **Online/Offline** por projeto (checkbox). Estado salvo; ao abrir o Larafim, só os marcados como Online sobem.
 - **Onde a configuração fica salva**:
-  1. **Padrão:** em `%LOCALAPPDATA%\Sentinel\projects.toml`. Nada é escrito dentro do projeto.
-  2. **Opcional:** botão "Salvar configuração no projeto" grava um `.sentinel.toml` na pasta do projeto, útil para levar a configuração para outra máquina. Ao fazer isso, o Sentinel adiciona o arquivo em **`.git/info/exclude`** (exclusão local, que não é commitada), então ele **não sobe para o GitHub** e o `.gitignore` do projeto também não é alterado. Quem quiser compartilhar com o time pode marcar "versionar este arquivo".
-  3. **Remover do Sentinel** nunca apaga arquivos. Projeto de pasta raiz removido (ou ignorado) vai para a lista "Projetos ignorados" em Configurações › Pastas de projetos, de onde pode voltar.
-4. O Sentinel **lê** arquivos que o projeto já tenha (`.php-version`, `.nvmrc`, `composer.json`), mas nunca os cria nem altera sozinho.
+  1. **Padrão:** em `%LOCALAPPDATA%\Larafim\projects.toml`. Nada é escrito dentro do projeto.
+  2. **Opcional:** botão "Salvar configuração no projeto" grava um `.larafim.toml` na pasta do projeto, útil para levar a configuração para outra máquina. Ao fazer isso, o Larafim adiciona o arquivo em **`.git/info/exclude`** (exclusão local, que não é commitada), então ele **não sobe para o GitHub** e o `.gitignore` do projeto também não é alterado. Quem quiser compartilhar com o time pode marcar "versionar este arquivo".
+  3. **Remover do Larafim** nunca apaga arquivos. Projeto de pasta raiz removido (ou ignorado) vai para a lista "Projetos ignorados" em Configurações › Pastas de projetos, de onde pode voltar.
+4. O Larafim **lê** arquivos que o projeto já tenha (`.php-version`, `.nvmrc`, `composer.json`), mas nunca os cria nem altera sozinho.
 
 ### 4.2 Versões de PHP
 - Fonte oficial Windows: `https://downloads.php.net/~windows/releases/releases.json` (o antigo `windows.php.net/downloads/releases/` redireciona para lá). Traz a última versão de cada minor (hoje do 7.4 ao 8.6), link do zip e **SHA-256**. Versões antigas em `/releases/archives/`.
@@ -87,14 +87,14 @@ Ajustável na tela do banco ("Modo leve" / "Modo padrão"). Os números de memó
   - projeto Node → proxy reverso para a porta do dev server.
 - **Pools de `php-cgi` por versão** (não por projeto): todos os projetos 8.3 compartilham o pool 8.3. No Windows o `php-cgi` atende uma requisição por vez, então cada pool tem N processos (ex.: 4) com round-robin. Pools sobem **sob demanda** (primeira requisição) e desligam após inatividade → PC leve.
 - **TLD `.offline`** (configurável nas preferências).
-- **Resolução de nomes**: bloco gerenciado no arquivo `hosts` (`# BEGIN SENTINEL` / `# END SENTINEL`), escrito por um pequeno helper que pede elevação (UAC) só quando a lista de domínios muda. Fase posterior: DNS local + regra NRPT para `*.offline` (pede admin uma única vez e nunca mais mexe no `hosts`).
+- **Resolução de nomes**: bloco gerenciado no arquivo `hosts` (`# BEGIN LARAFIM` / `# END LARAFIM`), escrito por um pequeno helper que pede elevação (UAC) só quando a lista de domínios muda. Fase posterior: DNS local + regra NRPT para `*.offline` (pede admin uma única vez e nunca mais mexe no `hosts`).
 - **Cuidado com o navegador**: como `.offline` não é um TLD conhecido, digitar só `loja.offline` na barra pode virar uma busca no Google. Por isso a UI sempre mostra e abre a URL completa (`http://loja.offline`). Depois do primeiro acesso, o navegador passa a reconhecer o endereço.
-- **Implementado na fase 3:** gateway próprio (hyper) + cliente FastCGI próprio; pools de `php-cgi` com 3 processos no máximo, criados conforme a demanda e desligados após 10 min parados; bloqueio de `..`, caminhos do Windows e arquivos ocultos (`.env`, `.git`); Job Object do Windows para nenhum `php-cgi` ficar órfão; o `hosts` recebe todos os projetos importados (ligar/desligar não pede UAC de novo); ajudante elevado valida cada linha antes de gravar e guarda `hosts.sentinel-backup`.
+- **Implementado na fase 3:** gateway próprio (hyper) + cliente FastCGI próprio; pools de `php-cgi` com 3 processos no máximo, criados conforme a demanda e desligados após 10 min parados; bloqueio de `..`, caminhos do Windows e arquivos ocultos (`.env`, `.git`); Job Object do Windows para nenhum `php-cgi` ficar órfão; o `hosts` recebe todos os projetos importados (ligar/desligar não pede UAC de novo); ajudante elevado valida cada linha antes de gravar e guarda `hosts.larafim-backup`.
 - **Conflito de portas**: ao iniciar, checa se 80/443/3306 estão ocupadas e mostra *quem* ocupa (Laragon, IIS, Apache...). Oferece porta alternativa.
-- **HTTPS (fase posterior)**: CA local gerada pelo Sentinel, instalada no repositório de certificados do usuário; certificado por domínio (`https://loja.offline`).
+- **HTTPS (fase posterior)**: CA local gerada pelo Larafim, instalada no repositório de certificados do usuário; certificado por domínio (`https://loja.offline`).
 
 ### 4.4 Node
-- Projeto com `package.json` e Node marcado: o Sentinel roda o script (`npm run dev` / `pnpm dev` / `yarn dev`, detectado pelo lockfile) com `PORT` definido, guarda logs e encaminha o domínio para essa porta.
+- Projeto com `package.json` e Node marcado: o Larafim roda o script (`npm run dev` / `pnpm dev` / `yarn dev`, detectado pelo lockfile) com `PORT` definido, guarda logs e encaminha o domínio para essa porta.
 - Projeto misto (Laravel + Vite): PHP no domínio principal, Vite rodando ao lado (botão "iniciar Vite").
 - Versões de Node: baixadas de `https://nodejs.org/dist/index.json` (zip Windows + SHASUMS), mesma lógica do PHP.
 - **Implementado na fase 5:** linhas LTS (18+) e a Current mais nova; versão por projeto (fixada, `.nvmrc`, `.node-version`, `engines`); atalhos `node`, `npm`, `npx`. Cada servidor de dev roda num Job Object próprio (parar mata a árvore cmd → npm → node). A porta é lida da saída (`Local: http://localhost:5173`) ou vem de `PORT`; o gateway faz proxy com WebSocket (HMR) e troca o Host para `localhost` (o Vite bloqueia domínios desconhecidos). Projetos Laravel + Vite recebem `APP_URL` com o endereço `.offline` (o plugin do Laravel libera o CORS). Saída ao vivo no painel do projeto.
@@ -107,27 +107,27 @@ Ajustável na tela do banco ("Modo leve" / "Modo padrão"). Os números de memó
 - **Backup**: exportar e importar `.sql` por projeto (`mariadb-dump` / `mariadb`), com backups salvos em `backups\<projeto>\` e data no nome.
 - Painel "Configuração para o projeto" com as variáveis `DB_*` (seção 4.6).
 
-- **Implementado na fase 6:** MariaDB LTS (12.3, 11.8, 11.4, 10.11) pela API oficial com SHA-256; dados em `data\mariadb\<linha>`; `my.ini` leve só em 127.0.0.1; liga sob demanda (projeto online que usa banco, ou botão) e desliga com `shutdown`. Seletor de banco no projeto (SQLite / MariaDB do Sentinel / bancos existentes) com prévia do `.env`, cópia `.env.sentinel.bak` e desfazer. Backups por projeto em `backups\<domínio>` e restauração. Adminer 6.3.1 (SHA-256 fixo) em `db.<domínio>` com login automático no MariaDB do Sentinel.
-- **MariaDB compartilhado ou próprio** (pedido do usuário): no projeto, a pessoa escolhe entre o MariaDB compartilhado (um servidor para todos, mais leve) e o **MariaDB próprio do projeto** (servidor só dele, com versão e porta próprias — porta livre sugerida a partir da 3310 — e dados em `data\mariadb-projetos`). Vários rodam ao mesmo tempo; o Adminer entra sozinho em todos os servidores do Sentinel e pede senha nos demais. Medido: ~140–165 MB de memória por servidor ligado.
-- **Bancos que já existem no PC** (pedido do usuário): conexões MySQL/MariaDB cadastradas (senha protegida pela DPAPI do Windows), detecção automática de servidores nas portas 3306–3310 (IPv4 e IPv6, inclusive serviços do Windows), teste de conexão, uso nos projetos com o mesmo fluxo (criar banco, `.env`, backup). Usa os programas do próprio servidor ou os do MariaDB do Sentinel (com `--plugin-dir`, para o `caching_sha2_password` do MySQL 8).
+- **Implementado na fase 6:** MariaDB LTS (12.3, 11.8, 11.4, 10.11) pela API oficial com SHA-256; dados em `data\mariadb\<linha>`; `my.ini` leve só em 127.0.0.1; liga sob demanda (projeto online que usa banco, ou botão) e desliga com `shutdown`. Seletor de banco no projeto (SQLite / MariaDB do Larafim / bancos existentes) com prévia do `.env`, cópia `.env.larafim.bak` e desfazer. Backups por projeto em `backups\<domínio>` e restauração. Adminer 6.3.1 (SHA-256 fixo) em `db.<domínio>` com login automático no MariaDB do Larafim.
+- **MariaDB compartilhado ou próprio** (pedido do usuário): no projeto, a pessoa escolhe entre o MariaDB compartilhado (um servidor para todos, mais leve) e o **MariaDB próprio do projeto** (servidor só dele, com versão e porta próprias — porta livre sugerida a partir da 3310 — e dados em `data\mariadb-projetos`). Vários rodam ao mesmo tempo; o Adminer entra sozinho em todos os servidores do Larafim e pede senha nos demais. Medido: ~140–165 MB de memória por servidor ligado.
+- **Bancos que já existem no PC** (pedido do usuário): conexões MySQL/MariaDB cadastradas (senha protegida pela DPAPI do Windows), detecção automática de servidores nas portas 3306–3310 (IPv4 e IPv6, inclusive serviços do Windows), teste de conexão, uso nos projetos com o mesmo fluxo (criar banco, `.env`, backup). Usa os programas do próprio servidor ou os do MariaDB do Larafim (com `--plugin-dir`, para o `caching_sha2_password` do MySQL 8).
 - **Terminal integrado (xterm.js):** adiado; por enquanto o botão de terminal abre o Windows Terminal já configurado.
 
 ### 4.6 Serviços por projeto e painel "Configuração para o projeto"
 **Projetos Laravel (com `.env`)** — no painel do projeto há uma seção **Serviços** com um seletor por categoria:
 
-| Categoria | Opções embutidas do Laravel | Serviços do Sentinel |
+| Categoria | Opções embutidas do Laravel | Serviços do Larafim |
 |---|---|---|
 | Banco | SQLite | MariaDB, PostgreSQL |
 | E-mail | log | Mailpit |
 | Storage | local | S3 local |
 | Fila / Cache | sync, database, file | (Redis, futuro) |
 
-Ao escolher um serviço do Sentinel: se não estiver instalado, oferece instalar → liga o serviço → (banco) pergunta qual banco usar ou cria um novo → mostra o que vai mudar no `.env` → aplica **só** as chaves daquela categoria. Antes da primeira mudança, guarda os valores originais em `.env.sentinel.bak`. Se o `.env` tiver uma configuração que o Sentinel não reconhece, o seletor mostra "Não gerenciado pelo Sentinel" e não mexe em nada.
+Ao escolher um serviço do Larafim: se não estiver instalado, oferece instalar → liga o serviço → (banco) pergunta qual banco usar ou cria um novo → mostra o que vai mudar no `.env` → aplica **só** as chaves daquela categoria. Antes da primeira mudança, guarda os valores originais em `.env.larafim.bak`. Se o `.env` tiver uma configuração que o Larafim não reconhece, o seletor mostra "Não gerenciado pelo Larafim" e não mexe em nada.
 
 **Qualquer projeto (inclusive não Laravel)** — cada serviço tem também o painel com as variáveis prontas, já preenchidas com a porta real e o nome do projeto:
 
 - **Copiar**: copia o bloco para a área de transferência, para colar onde quiser.
-- **Aplicar no `.env`**: escolhe um ou vários projetos; o Sentinel mostra antes o que vai mudar (linha antiga → linha nova), faz a cópia `.env.sentinel.bak` e altera **só** as chaves daquele serviço. Nada é aplicado sem confirmação.
+- **Aplicar no `.env`**: escolhe um ou vários projetos; o Larafim mostra antes o que vai mudar (linha antiga → linha nova), faz a cópia `.env.larafim.bak` e altera **só** as chaves daquele serviço. Nada é aplicado sem confirmação.
 - **Desfazer**: restaura o `.env` a partir da cópia.
 
 Exemplo do Mailpit:
@@ -150,8 +150,8 @@ DB_PASSWORD=
 
 ### 4.7 Terminal e CLI
 - **Shims** (`php.exe`, `composer.bat`, `node.exe`, `npm.cmd`) em `bin\`, adicionados ao `PATH` do usuário. O shim olha a pasta atual, descobre o projeto e executa a versão certa. → Em qualquer terminal, dentro do projeto 8.3, `php -v` mostra 8.3.
-- **Implementado na fase 4:** atalho próprio (`sentinel-shim`, ~450 KB, console) copiado como `php.exe` e `composer.exe`. Ordem de escolha: `SENTINEL_PHP` → projeto do Sentinel (versão fixada ou a mais nova compatível) → `.php-version`/`composer.json` da pasta → versão padrão das Configurações → mais nova instalada. Se nada servir, explica e sai com código 1 (nunca usa uma versão errada em silêncio). Configurações › Terminal: instalar/reparar, ligar no PATH do usuário (sem admin), alerta de outro `php.exe` no PATH do sistema, versão padrão e "Testar uma pasta". Botão de terminal no projeto abre o Windows Terminal (ou cmd) com os atalhos na frente do PATH.
-- **Instalador (fase 9):** o `sentinel-shim.exe` vai nos recursos do pacote NSIS, ao lado do executável.
+- **Implementado na fase 4:** atalho próprio (`larafim-shim`, ~450 KB, console) copiado como `php.exe` e `composer.exe`. Ordem de escolha: `LARAFIM_PHP` → projeto do Larafim (versão fixada ou a mais nova compatível) → `.php-version`/`composer.json` da pasta → versão padrão das Configurações → mais nova instalada. Se nada servir, explica e sai com código 1 (nunca usa uma versão errada em silêncio). Configurações › Terminal: instalar/reparar, ligar no PATH do usuário (sem admin), alerta de outro `php.exe` no PATH do sistema, versão padrão e "Testar uma pasta". Botão de terminal no projeto abre o Windows Terminal (ou cmd) com os atalhos na frente do PATH.
+- **Instalador (fase 9):** o `larafim-shim.exe` vai nos recursos do pacote NSIS, ao lado do executável.
 - **Terminal integrado** na UI (xterm.js + ConPTY), aberto já na pasta do projeto.
 - Botão "Abrir no Windows Terminal" / "Abrir no VS Code".
 
@@ -159,8 +159,8 @@ DB_PASSWORD=
 - Ícone na bandeja (tray): status, start/stop geral, projetos online.
 - Iniciar com o Windows (opcional) — inicia minimizado na bandeja.
 - Logs por projeto e por serviço (gateway, php-cgi, mariadb, node).
-- **Monitor de recursos**: RAM e CPU de cada serviço que o Sentinel subiu, para a pessoa ver que o app está leve (e o que desligar se não estiver).
-- **Idiomas (i18n)**: português (Brasil) e inglês. O instalador pergunta o idioma e grava a escolha (`HKCU\Software\Sentinel\Language`); na primeira abertura o app usa essa escolha ou, sem ela, o idioma da interface do Windows (não o formato regional). Troca em Configurações › Geral, na hora, sem reiniciar: interface, mensagens de erro do backend, bandeja, título das janelas, páginas do gateway e o shim do terminal. A chave de cada texto é o próprio texto em português (estilo gettext); cada idioma é um JSON em `locales/`, lido pela interface e pelo Rust. Para um idioma novo basta criar o arquivo (ver `locales/README.md`); `node scripts/i18n.mjs check` mostra o que falta traduzir.
+- **Monitor de recursos**: RAM e CPU de cada serviço que o Larafim subiu, para a pessoa ver que o app está leve (e o que desligar se não estiver).
+- **Idiomas (i18n)**: português (Brasil) e inglês. O instalador pergunta o idioma e grava a escolha (`HKCU\Software\Larafim\Language`); na primeira abertura o app usa essa escolha ou, sem ela, o idioma da interface do Windows (não o formato regional). Troca em Configurações › Geral, na hora, sem reiniciar: interface, mensagens de erro do backend, bandeja, título das janelas, páginas do gateway e o shim do terminal. A chave de cada texto é o próprio texto em português (estilo gettext); cada idioma é um JSON em `locales/`, lido pela interface e pelo Rust. Para um idioma novo basta criar o arquivo (ver `locales/README.md`); `node scripts/i18n.mjs check` mostra o que falta traduzir.
 
 ### 4.9 Estrutura de telas
 Base detalhada em `01_MAPA_DE_TELAS.md` a `05_COMPONENTES_ESTADOS_E_ACEITE.md`, com estes ajustes (referência de organização: Laravel Herd 2.0, com visual próprio):
@@ -201,18 +201,18 @@ Ideias tiradas de Laravel Herd, Laragon, ServBay e DBngin. Regras para todos:
 | **PostgreSQL** | Banco alternativo para projetos que usam Postgres | `DB_CONNECTION=pgsql`, `DB_HOST=127.0.0.1`, `DB_PORT=5432`, `DB_DATABASE=<projeto>`, `DB_USERNAME=postgres`, `DB_PASSWORD=` |
 | **Storage S3 local (RustFS)** | "Fake S3": testar upload/download de arquivos como se fosse a AWS, sem custo | `FILESYSTEM_DISK=s3`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION=us-east-1`, `AWS_BUCKET=<projeto>`, `AWS_ENDPOINT=http://127.0.0.1:9000`, `AWS_USE_PATH_STYLE_ENDPOINT=true` |
 
-Ao ligar o storage S3 num projeto, o Sentinel cria automaticamente o bucket com o nome do projeto. Painel do storage em `http://s3.offline`.
+Ao ligar o storage S3 num projeto, o Larafim cria automaticamente o bucket com o nome do projeto. Painel do storage em `http://s3.offline`.
 
 **Fontes escolhidas na fase 8** (mesmo padrão do Mailpit: release no GitHub, conferida pelo SHA-256 do campo `digest`):
 
 - **PostgreSQL:** builds do projeto `theseus-rs/postgresql-binaries` (`postgresql-<versão>-x86_64-pc-windows-msvc.zip`, ~50 MB, com proveniência assinada). O zip da EDB, para comparação, tem ~337 MB e não publica checksum. Versões oferecidas: as majors suportadas (18, 17, 16, 15), padrão a mais nova. Dados em `data\postgres-<major>\`, `initdb -U postgres -A trust -E UTF8` na primeira execução, porta 5432 (ou a próxima livre), `postgresql.conf` leve (`shared_buffers=32MB`, `max_connections=20`), ligado sob demanda como o MariaDB. Criar banco com `psql`, backup com `pg_dump`/restauração com `psql`. Adminer já fala PostgreSQL (precisa da extensão `pdo_pgsql`/`pgsql` ligada no PHP).
-- **Storage S3:** **RustFS** (`rustfs/rustfs`, Apache 2.0, 1.0 GA), zip oficial `rustfs-windows-x86_64-v<versão>.zip` (~118 MB). Substitui o MinIO, que deixou de publicar binários. O executável descompactado tem ~372 MB em disco; ligado usa ~76 MB de memória. Os parâmetros (endereço, painel) vão por variáveis `RUSTFS_*`, porque na linha de comando `--console-enable true` faz o `true` virar uma segunda pasta de dados. O Laravel precisa de `league/flysystem-aws-s3-v3` para o disco `s3`; o Sentinel avisa quando o pacote falta. API em `127.0.0.1:9000`, painel em `s3.<tld>` pelo gateway, path-style. Chaves locais geradas pelo Sentinel e guardadas com DPAPI; bucket criado com o nome do projeto.
+- **Storage S3:** **RustFS** (`rustfs/rustfs`, Apache 2.0, 1.0 GA), zip oficial `rustfs-windows-x86_64-v<versão>.zip` (~118 MB). Substitui o MinIO, que deixou de publicar binários. O executável descompactado tem ~372 MB em disco; ligado usa ~76 MB de memória. Os parâmetros (endereço, painel) vão por variáveis `RUSTFS_*`, porque na linha de comando `--console-enable true` faz o `true` virar uma segunda pasta de dados. O Laravel precisa de `league/flysystem-aws-s3-v3` para o disco `s3`; o Larafim avisa quando o pacote falta. API em `127.0.0.1:9000`, painel em `s3.<tld>` pelo gateway, path-style. Chaves locais geradas pelo Larafim e guardadas com DPAPI; bucket criado com o nome do projeto.
 
 ### 5.3 Ideias para depois
 | Ideia | O que faz | Como |
 |---|---|---|
 | **Compartilhar projeto** | URL pública temporária para mostrar o projeto a um cliente | Cloudflare Quick Tunnel (`cloudflared`), sem conta |
-| **Dumps** | Captura `dump()`/`dd()` numa janela do Sentinel | Servidor do VarDumper (Symfony) ou `auto_prepend_file` |
+| **Dumps** | Captura `dump()`/`dd()` numa janela do Larafim | Servidor do VarDumper (Symfony) ou `auto_prepend_file` |
 | **Redis** | Cache/filas | Sem versão oficial para Windows: avaliar Memurai ou um port de Redis/Valkey |
 | **Meilisearch** | Busca (Laravel Scout) | Binário único |
 | **Modo global** | Trocar a versão do PHP de todos os projetos de uma vez | |
@@ -235,21 +235,21 @@ Ao ligar o storage S3 num projeto, o Sentinel cria automaticamente o bucket com 
 
 ### 6.2 Estrutura do código (workspace Cargo)
 ```
-F:\sentinel\sentinel\     ← código (pasta separada de F:\sentinel\docs)
+F:\larafim\larafim\     ← código (pasta separada de F:\larafim\docs)
 ├─ crates/
-│  ├─ sentinel-core/      domínio: projetos, detecção, config
-│  ├─ sentinel-runtimes/  PHP/Node/MariaDB/extras: catálogo, download, instalação, update
-│  ├─ sentinel-server/    gateway HTTP, pools php-cgi, proxy Node
-│  ├─ sentinel-services/  supervisor de processos: MariaDB, Mailpit, Postgres, S3, workers, Node
-│  ├─ sentinel-envfile/   leitura/escrita segura de .env (diff, backup, desfazer)
-│  ├─ sentinel-system/    hosts, portas, PATH, elevação UAC, certificados
-│  └─ sentinel-shim/      binário shim (php.exe, node.exe...)
+│  ├─ larafim-core/      domínio: projetos, detecção, config
+│  ├─ larafim-runtimes/  PHP/Node/MariaDB/extras: catálogo, download, instalação, update
+│  ├─ larafim-server/    gateway HTTP, pools php-cgi, proxy Node
+│  ├─ larafim-services/  supervisor de processos: MariaDB, Mailpit, Postgres, S3, workers, Node
+│  ├─ larafim-envfile/   leitura/escrita segura de .env (diff, backup, desfazer)
+│  ├─ larafim-system/    hosts, portas, PATH, elevação UAC, certificados
+│  └─ larafim-shim/      binário shim (php.exe, node.exe...)
 └─ app/                   Tauri (src-tauri + frontend Svelte)
 ```
 
 ### 6.3 Dados em disco
 ```
-%LOCALAPPDATA%\Sentinel\
+%LOCALAPPDATA%\Larafim\
 ├─ config.toml            pastas raiz, TLD, portas, preferências
 ├─ projects.toml          projetos e configurações (versão, docroot, domínio, online)
 ├─ runtimes\php\8.3.x\ 8.4.x\ ...
@@ -267,7 +267,7 @@ F:\sentinel\sentinel\     ← código (pasta separada de F:\sentinel\docs)
 ```
 navegador → http://loja.offline
   → hosts: loja.offline = 127.0.0.1
-  → Gateway Sentinel :80 lê Host "loja.offline" → projeto "loja" (PHP 8.3, docroot public/)
+  → Gateway Larafim :80 lê Host "loja.offline" → projeto "loja" (PHP 8.3, docroot public/)
   → arquivo estático existe? serve direto
   → senão: FastCGI → pool php-cgi 8.3 (sobe se estiver parado) → resposta
 ```
@@ -275,8 +275,8 @@ navegador → http://loja.offline
 ## 7. Metas de desempenho
 | Situação | Meta |
 |---|---|
-| Sentinel aberto, nenhum projeto online | < 80 MB de RAM no total (app + WebView2) |
-| Sentinel fechado na bandeja | < 30 MB (WebView descarregado, só o núcleo Rust) |
+| Larafim aberto, nenhum projeto online | < 80 MB de RAM no total (app + WebView2) |
+| Larafim fechado na bandeja | < 30 MB (WebView descarregado, só o núcleo Rust) |
 | Gateway parado esperando requisição | ~0% de CPU |
 | Pool de PHP | só existe enquanto há projeto daquela versão sendo acessado |
 
@@ -286,10 +286,10 @@ Medir essas metas no fim de cada fase.
 | Situação | Medido | Meta |
 |---|---|---|
 | Executável | 4,3 MB | — |
-| Janela aberta (Sentinel + processos do WebView2) | ~103 MB de memória privada | < 80 MB ❌ |
+| Janela aberta (Larafim + processos do WebView2) | ~103 MB de memória privada | < 80 MB ❌ |
 | Só na bandeja (janela descarregada) | 9,5 MB | < 30 MB ✅ |
 
-O WebView2 sozinho usa ~90 MB mesmo com uma página simples. Já aplicado: GPU desligada e um único processo de renderização (caiu de 187 MB para 103 MB). Como o Sentinel passa a maior parte do tempo na bandeja, o custo real no dia a dia é o de 9,5 MB. A meta de janela aberta fica para revisar quando as telas reais existirem.
+O WebView2 sozinho usa ~90 MB mesmo com uma página simples. Já aplicado: GPU desligada e um único processo de renderização (caiu de 187 MB para 103 MB). Como o Larafim passa a maior parte do tempo na bandeja, o custo real no dia a dia é o de 9,5 MB. A meta de janela aberta fica para revisar quando as telas reais existirem.
 
 ## 8. Roadmap
 
@@ -304,7 +304,7 @@ O WebView2 sozinho usa ~90 MB mesmo com uma página simples. Já aplicado: GPU d
 | **6. Banco** ✅ (terminal integrado adiado) | MariaDB leve e sob demanda, Adminer, criar banco, backup, painel de `.env`, terminal integrado | Ambiente completo |
 | **7. Ferramentas** ✅ | Mailpit (caixa local em `mail.<tld>`, aplica no `.env` com prévia), Xdebug por versão do PHP (só builds estáveis, `launch.json` pronto), visualizador de logs, workers do Laravel (fila, agendador, Reverb; voltam sozinhos ao abrir o app), novo projeto Laravel | Paridade com o essencial do Herd |
 | **8. Catálogo opcional** ✅ | PostgreSQL (download de ~50 MB por versão, servidor sob demanda, banco por projeto, backup/restauração, `.env`, extensões `pgsql`/`pdo_pgsql` ligadas no PHP do projeto, Adminer com login automático) e storage S3 local com RustFS (bucket por projeto criado por requisição S3 assinada, `.env` com `AWS_*`, painel em `s3.<tld>/rustfs/console/`) | Projetos com Postgres e upload de arquivos testáveis |
-| **9. Polimento** ✅ (DNS/NRPT, auto-update e compartilhar adiados) | Iniciar com o Windows (HKCU\Run, abre só na bandeja com `--tray`), HTTPS local (CA própria restrita ao domínio local por *name constraints*, chave com DPAPI, certificado por domínio via SNI, `HTTPS=on` para o PHP e `X-Forwarded-Proto` para o Node, botão "Confiar…" que instala a CA só no usuário), instalador NSIS por usuário com o `sentinel-shim.exe` | Pronto para uso diário |
+| **9. Polimento** ✅ (DNS/NRPT, auto-update e compartilhar adiados) | Iniciar com o Windows (HKCU\Run, abre só na bandeja com `--tray`), HTTPS local (CA própria restrita ao domínio local por *name constraints*, chave com DPAPI, certificado por domínio via SNI, `HTTPS=on` para o PHP e `X-Forwarded-Proto` para o Node, botão "Confiar…" que instala a CA só no usuário), instalador NSIS por usuário com o `larafim-shim.exe` | Pronto para uso diário |
 
 ## 9. Riscos e cuidados
 - **Porta 80 ocupada** (Laragon, IIS, Skype antigo): detectar e explicar; não brigar com o Laragon — rodar lado a lado com porta alternativa se preciso.

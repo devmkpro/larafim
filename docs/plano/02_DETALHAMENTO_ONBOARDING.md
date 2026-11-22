@@ -1,4 +1,4 @@
-# Sentinel — Especificação funcional: primeiro acesso
+# Larafim — Especificação funcional: primeiro acesso
 Referência: PLANO.md. As telas abaixo são uma proposta de UX para executar as fases 0–3; o plano original não define um onboarding obrigatório.
 
 ## ONB-01 — Boas-vindas
@@ -22,7 +22,7 @@ Referência: PLANO.md. As telas abaixo são uma proposta de UX para executar as 
 **Botões:** Escolher pasta, Adicionar outra, Atualizar prévia, Voltar, Continuar.
 **Comportamento:** examinar subpastas sob demanda, detectar `artisan`, `composer.json`, `index.php`, `package.json`, `.php-version`, `.nvmrc`. Mostrar contagem e prévia dos candidatos; não iniciar nenhum.
 **Validações:** caminho existente, acessível e sem duplicidade; oferecer pular quando não houver projetos.
-**Persistência:** `config.toml` em `%LOCALAPPDATA%\Sentinel`.
+**Persistência:** `config.toml` em `%LOCALAPPDATA%\Larafim`.
 
 ## ONB-04 — PHP inicial (opcional)
 **Objetivo:** oferecer runtime compatível com projetos detectados.

@@ -1,17 +1,17 @@
 //! PostgreSQL (fase 8): download opcional, um servidor sob demanda e um
 //! banco por projeto, como o MariaDB compartilhado.
 
-use sentinel_core::t;
+use larafim_core::t;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-use sentinel_runtimes::http_client;
-use sentinel_runtimes::php::ini;
-use sentinel_runtimes::postgres::{self, PgEntry};
-use sentinel_server::postgres::{PgClient, PgError, PgService, PgSetup, PgStatus};
+use larafim_runtimes::http_client;
+use larafim_runtimes::php::ini;
+use larafim_runtimes::postgres::{self, PgEntry};
+use larafim_server::postgres::{PgClient, PgError, PgService, PgSetup, PgStatus};
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -58,7 +58,7 @@ pub fn pg_setup(app: &AppHandle) -> Result<PgSetup, String> {
 fn pg_err(e: PgError) -> String {
     match e {
         PgError::PortBusy(p) => {
-            let who = sentinel_server::port::listener_on(p)
+            let who = larafim_server::port::listener_on(p)
                 .map(|o| match o.hint {
                     Some(h) => format!("{} ({h})", o.name),
                     None => o.name,
@@ -84,7 +84,7 @@ pub async fn start_pg(app: &AppHandle) -> Result<(), String> {
         crate::services::refresh_adminer(app);
         // O Adminer (PHP mais novo) precisa da extensão pgsql.
         let paths = app.state::<AppState>().paths.clone();
-        if let Some(newest) = sentinel_runtimes::php::installed::list_installed(&paths.php_dir()).first() {
+        if let Some(newest) = larafim_runtimes::php::installed::list_installed(&paths.php_dir()).first() {
             enable_pg_extensions(app, newest).await;
         }
         crate::server::after_change(app, false);
@@ -99,7 +99,7 @@ pub async fn client(app: &AppHandle) -> Result<PgClient, String> {
 
 /// Liga `pgsql` e `pdo_pgsql` no `php.ini` dessa versão (se ainda não
 /// estiverem) e reinicia os php-cgi para valer.
-pub async fn enable_pg_extensions(app: &AppHandle, php: &sentinel_runtimes::php::installed::InstalledPhp) {
+pub async fn enable_pg_extensions(app: &AppHandle, php: &larafim_runtimes::php::installed::InstalledPhp) {
     let Ok(text) = ini::read(&php.ini()) else { return };
     let ext_dir = php.dir.join("ext");
     let current = ini::list_extensions(&text, &ext_dir);
@@ -122,10 +122,10 @@ pub async fn enable_pg_extensions(app: &AppHandle, php: &sentinel_runtimes::php:
 /// Liga as extensões no PHP que o projeto usa.
 pub async fn enable_for_project(app: &AppHandle, path: &Path) {
     let state = app.state::<AppState>();
-    let Some(view) = crate::server::views(&state).into_iter().find(|v| sentinel_core::store::same_path(&v.path, path)) else {
+    let Some(view) = crate::server::views(&state).into_iter().find(|v| larafim_core::store::same_path(&v.path, path)) else {
         return;
     };
-    let installed = sentinel_runtimes::php::installed::list_installed(&state.paths.php_dir());
+    let installed = larafim_runtimes::php::installed::list_installed(&state.paths.php_dir());
     let Some(rt) = crate::server::php_for(&view, &installed).0 else { return };
     if let Some(php) = installed.iter().find(|p| p.version == rt.version) {
         enable_pg_extensions(app, php).await;
@@ -263,10 +263,10 @@ pub async fn pg_install(app: AppHandle, major: String) -> CmdResult<()> {
             // O Adminer serve também para o PostgreSQL.
             let ports = crate::services::maria_ports(&app);
             let pg = pg_port(&app);
-            if let Err(e) = sentinel_runtimes::extras::ensure_adminer(&client, &paths, &ports, &[pg]).await {
+            if let Err(e) = larafim_runtimes::extras::ensure_adminer(&client, &paths, &ports, &[pg]).await {
                 tracing::warn!("Adminer não baixado: {e}");
             }
-            Ok::<(), sentinel_runtimes::Error>(())
+            Ok::<(), larafim_runtimes::Error>(())
         }
         .await;
         app.state::<PgState>().installing.lock().unwrap().remove(&major);
@@ -310,7 +310,7 @@ pub async fn pg_configure(app: AppHandle, version: Option<String>, port: u16) ->
         return Err(t!("use uma porta acima de 1024 (ex.: 5432 ou 5433)"));
     }
     if crate::services::maria_ports(&app).contains(&port) {
-        return Err(t!("a porta {port} já é usada por um MariaDB do Sentinel", port = port));
+        return Err(t!("a porta {port} já é usada por um MariaDB do Larafim", port = port));
     }
     {
         let state = app.state::<AppState>();

@@ -144,7 +144,7 @@
     name: string;
     sub: string;
     running: boolean;
-    /** Serviço de fora: o Sentinel não liga nem desliga. */
+    /** Serviço de fora: o Larafim não liga nem desliga. */
     external?: boolean;
     download?: Progress | null;
   }
@@ -396,7 +396,7 @@
     };
   }
   async function removeConnection(c: ConnectionInfo) {
-    const ok = await confirm(t('Tirar "{name}" do Sentinel? O servidor e os bancos dele não são alterados.', { name: c.name }), t("Remover conexão"), t("Remover"));
+    const ok = await confirm(t('Tirar "{name}" do Larafim? O servidor e os bancos dele não são alterados.', { name: c.name }), t("Remover conexão"), t("Remover"));
     if (ok) run(() => services.removeConnection(c.id));
   }
 
@@ -532,7 +532,7 @@
           {#if item.download}
             {t("Instalando…")}
           {:else if item.external}
-            {t("Servidor de fora: o Sentinel não liga nem desliga")}
+            {t("Servidor de fora: o Larafim não liga nem desliga")}
           {:else}
             <span class="dot inline" class:on={item.running}></span>
             {item.running ? t("Rodando") : t("Desligado")}

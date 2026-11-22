@@ -1,9 +1,9 @@
 //! Iniciar com o Windows: uma entrada em HKCU\...\Run (só do usuário, sem
-//! admin) que abre o Sentinel direto na bandeja (`--tray`).
-use sentinel_core::t;
+//! admin) que abre o Larafim direto na bandeja (`--tray`).
+use larafim_core::t;
 
 const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-const VALUE: &str = "Sentinel";
+const VALUE: &str = "Larafim";
 pub const TRAY_ARG: &str = "--tray";
 
 fn wide(s: &str) -> Vec<u16> {
