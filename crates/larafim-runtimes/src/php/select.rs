@@ -150,6 +150,7 @@ mod tests {
         let cfg = |path: &Path, domain: &str, php: Option<&str>| ProjectConfig {
             path: path.to_path_buf(),
             domain: domain.into(),
+            aliases: Vec::new(),
             php: php.map(String::from),
             docroot: String::new(),
             node: false,
@@ -161,6 +162,10 @@ mod tests {
             mail: None,
             storage: None,
             workers: Vec::new(),
+            reverb_port: None,
+            queues: Vec::new(),
+            queue_connection: None,
+            queue_redis_env: None,
             online: false,
         };
         store.upsert(cfg(&loja, "loja", None)).unwrap();

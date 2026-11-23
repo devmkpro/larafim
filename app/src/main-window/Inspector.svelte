@@ -9,8 +9,11 @@
   import { terminal } from "../lib/terminal";
   import DbPanel from "./DbPanel.svelte";
   import WorkersPanel from "./WorkersPanel.svelte";
+  import AliasesPanel from "./AliasesPanel.svelte";
   import { toolsApi } from "../lib/tools";
   import { s3 } from "../lib/s3";
+  import { redis } from "../lib/redis";
+  import InstallProgress from "../lib/InstallProgress.svelte";
   import DevPanel from "./DevPanel.svelte";
   import { app } from "../lib/state.svelte";
   import Toggle from "../lib/Toggle.svelte";
@@ -61,6 +64,66 @@
   }
   let mailKey = $state(0);
   let storageKey = $state(0);
+  let redisKey = $state(0);
+  let redisBusy = $state(false);
+  let installingPredis = $state(false);
+
+  // Redis do Larafim nas filas do projeto: mostra o que muda no .env antes.
+  async function chooseRedis(kind: string) {
+    if (!project) return;
+    const p = project;
+    const connection = kind === "redis" ? "redis" : "none";
+    redisBusy = true;
+    try {
+      const pv = await redis.queuePreview(p.path, connection);
+      if (connection === "redis") {
+        if (!pv.configured) {
+          error = t("Adicione o Redis em Configurações › Serviços.");
+          redisKey++;
+          return;
+        }
+        if (pv.needs_predis) {
+          // Sem o pacote o Laravel não conversa com o Redis: oferece instalar (muda o composer.json).
+          const install = await confirm(
+            t("O projeto precisa do pacote predis/predis para usar o Redis. Instalar agora? (composer require predis/predis, altera composer.json e composer.lock)"),
+            "Redis",
+            t("Instalar"),
+          );
+          if (!install) {
+            redisKey++;
+            return;
+          }
+          installingPredis = true;
+          try {
+            await redis.installPredis(p.path);
+          } finally {
+            installingPredis = false;
+          }
+        }
+      }
+      const message = connection === "redis"
+        ? t("Usar o Redis do Larafim nas filas deste projeto?")
+        : pv.has_snapshot
+          ? t("Restaurar a configuração anterior da fila e do Redis neste projeto?")
+          : t("Os valores anteriores da fila e do Redis não foram guardados. Deixar de gerenciar o Redis sem editar o .env?");
+      const lines = pv.diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? t("(comentada)")}`).join("\n");
+      const ok = await confirm(
+        message + (lines ? "\n\n" + t("Mudanças no .env (com cópia em .env.larafim.bak):") + "\n" + lines : ""),
+        "Redis",
+        t("Aplicar"),
+      );
+      if (!ok) {
+        redisKey++;
+        return;
+      }
+      await redis.queueConnection(p.path, connection);
+    } catch (e) {
+      error = String(e);
+      redisKey++;
+    } finally {
+      redisBusy = false;
+    }
+  }
 
   async function chooseStorage(kind: string) {
     if (!project) return;
@@ -469,6 +532,12 @@
       </div>
     {/if}
 
+    {#if imported}
+      <div class="section">
+        <AliasesPanel {project} {onchange} />
+      </div>
+    {/if}
+
     {#if imported && project.kind !== "node"}
       <div class="section">
         <div class="section-title">{t("Serviços")}</div>
@@ -504,6 +573,20 @@
           <button class="btn wide" onclick={() => s3.open().catch((e) => (error = String(e)))}>
             <Glyph name="openExternal" /> {t("Abrir painel do storage")}
           </button>
+        {/if}
+        {#if project.kind === "laravel"}
+          <div class="field">
+            <span>Redis</span>
+            {#key redisKey}
+              <div class="select">
+                <select value={project.queue_connection ?? "none"} disabled={redisBusy} onchange={(e) => chooseRedis(e.currentTarget.value)}>
+                  <option value="none">{t("Não gerenciado")}</option>
+                  <option value="redis">{t("Redis do Larafim (filas)")}</option>
+                </select>
+              </div>
+            {/key}
+          </div>
+          {#if installingPredis}<InstallProgress path={project.path} label={t("Instalando predis/predis…")} />{/if}
         {/if}
       </div>
     {/if}

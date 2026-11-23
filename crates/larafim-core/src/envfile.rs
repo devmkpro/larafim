@@ -15,14 +15,20 @@ pub const BACKUP_NAME: &str = ".env.larafim.bak";
 pub struct EnvChange {
     pub key: String,
     pub value: Option<String>,
+    raw: bool,
 }
 
 impl EnvChange {
     pub fn set(key: &str, value: &str) -> Self {
-        Self { key: key.into(), value: Some(value.into()) }
+        Self { key: key.into(), value: Some(value.into()), raw: false }
     }
     pub fn unset(key: &str) -> Self {
-        Self { key: key.into(), value: None }
+        Self { key: key.into(), value: None, raw: false }
+    }
+
+    /// Restaura o lado direito original, incluindo aspas, referências e comentários.
+    pub(crate) fn restore(key: &str, value: Option<String>) -> Self {
+        Self { key: key.into(), value, raw: true }
     }
 }
 
@@ -42,12 +48,33 @@ fn key_of(line: &str) -> Option<&str> {
     (!k.is_empty() && !k.starts_with('#') && k.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')).then_some(k)
 }
 
-/// Valor atual de uma chave (ativa, não comentada).
+/// Valor atual de uma chave (ativa, não comentada). Se a chave aparecer
+/// repetida, vale a última, como no phpdotenv e no Vite.
 pub fn get(text: &str, key: &str) -> Option<String> {
-    text.lines().find(|l| key_of(l) == Some(key)).map(|l| {
-        let v = l.split_once('=').map(|(_, v)| v.trim()).unwrap_or_default();
-        unquote(v)
-    })
+    get_raw(text, key).map(|v| unquote(v.trim()))
+}
+
+pub(crate) fn get_raw<'a>(text: &'a str, key: &str) -> Option<&'a str> {
+    text.lines().rev().find(|l| key_of(l) == Some(key)).and_then(|l| l.split_once('=')).map(|(_, v)| v)
+}
+
+/// Uma atribuição restaurada deve terminar na própria linha, inclusive com aspas.
+fn safe_raw_value(value: &str) -> bool {
+    if !crate::safety::is_env_value(&value.replace('\t', " ")) {
+        return false;
+    }
+    let mut chars = value.trim_start().chars();
+    let Some(delimiter @ ('\'' | '"')) = chars.next() else { return true };
+    while let Some(c) = chars.next() {
+        if c == delimiter {
+            let rest = chars.as_str().trim_start();
+            return rest.is_empty() || rest.starts_with('#');
+        }
+        if delimiter == '"' && c == '\\' {
+            chars.next();
+        }
+    }
+    false
 }
 
 /// Inverso de `quote`: tira as aspas e desfaz os escapes das aspas duplas.
@@ -93,7 +120,7 @@ pub fn validate(changes: &[EnvChange]) -> Result<()> {
         if !crate::safety::is_env_key(&ch.key) {
             return Err(Error::Invalid(crate::t!("chave inválida no .env: {a}", a = ch.key.escape_debug())));
         }
-        if ch.value.as_deref().is_some_and(|v| !crate::safety::is_env_value(v)) {
+        if ch.value.as_deref().is_some_and(|v| !(if ch.raw { safe_raw_value(v) } else { crate::safety::is_env_value(v) })) {
             return Err(Error::Invalid(crate::t!("valor inválido para {a} no .env (quebra de linha ou caractere de controle)", a = ch.key)));
         }
     }
@@ -111,27 +138,46 @@ pub fn apply(text: &str, changes: &[EnvChange]) -> (String, Vec<DiffLine>) {
         if validate(std::slice::from_ref(ch)).is_err() {
             continue;
         }
-        let before = get(&lines.join("\n"), &ch.key);
-        if before == ch.value {
+        let current = lines.join("\n");
+        let before = get(&current, &ch.key);
+        let same = if ch.raw { get_raw(&current, &ch.key) == ch.value.as_deref() } else { before == ch.value };
+        if same {
             continue;
         }
         let idx = lines.iter().position(|l| key_of(l) == Some(ch.key.as_str()));
+        // Linhas repetidas da mesma chave: todas recebem a mudança (senão a
+        // última, que é a que vale, continuaria com o valor antigo).
+        let dups: Vec<usize> = match idx {
+            Some(first) => (first + 1..lines.len()).filter(|&i| key_of(&lines[i]) == Some(ch.key.as_str())).collect(),
+            None => Vec::new(),
+        };
         match (&ch.value, idx) {
-            (Some(v), Some(i)) => lines[i] = format!("{}={}", ch.key, quote(v)),
+            (Some(v), Some(i)) => {
+                let value = if ch.raw { v.clone() } else { quote(v) };
+                for j in std::iter::once(i).chain(dups) {
+                    lines[j] = format!("{}={value}", ch.key);
+                }
+            }
             (Some(v), None) => {
+                let value = if ch.raw { v.clone() } else { quote(v) };
                 // Reaproveita uma linha comentada da mesma chave, se houver.
                 let commented = lines.iter().position(|l| {
                     l.trim_start().strip_prefix('#').map(str::trim_start).and_then(key_of) == Some(ch.key.as_str())
                 });
                 match commented {
-                    Some(i) => lines[i] = format!("{}={}", ch.key, quote(v)),
-                    None => lines.push(format!("{}={}", ch.key, quote(v))),
+                    Some(i) => lines[i] = format!("{}={value}", ch.key),
+                    None => lines.push(format!("{}={value}", ch.key)),
                 }
             }
-            (None, Some(i)) => lines[i] = format!("# {}", lines[i]),
+            (None, Some(i)) => {
+                for j in std::iter::once(i).chain(dups) {
+                    lines[j] = format!("# {}", lines[j]);
+                }
+            }
             (None, None) => continue,
         }
-        diff.push(DiffLine { key: ch.key.clone(), before, after: ch.value.clone() });
+        let after = ch.value.as_deref().map(|v| if ch.raw { unquote(v.trim()) } else { v.to_string() });
+        diff.push(DiffLine { key: ch.key.clone(), before, after });
     }
     let mut out = lines.join(newline);
     if text.ends_with('\n') || text.is_empty() {
@@ -144,10 +190,18 @@ pub fn env_path(project: &Path) -> PathBuf {
     project.join(".env")
 }
 
+fn read(path: &Path) -> Result<String> {
+    match std::fs::read_to_string(path) {
+        Ok(text) => Ok(text),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+        Err(e) => Err(Error::io(path, e)),
+    }
+}
+
 /// Só calcula o que mudaria (para a tela de confirmação).
 pub fn preview(project: &Path, changes: &[EnvChange]) -> Result<Vec<DiffLine>> {
     validate(changes)?;
-    let text = std::fs::read_to_string(env_path(project)).unwrap_or_default();
+    let text = read(&env_path(project))?;
     Ok(apply(&text, changes).1)
 }
 
@@ -156,7 +210,7 @@ pub fn preview(project: &Path, changes: &[EnvChange]) -> Result<Vec<DiffLine>> {
 pub fn write(project: &Path, changes: &[EnvChange]) -> Result<Vec<DiffLine>> {
     validate(changes)?;
     let path = env_path(project);
-    let text = std::fs::read_to_string(&path).unwrap_or_default();
+    let text = read(&path)?;
     let (new_text, diff) = apply(&text, changes);
     if diff.is_empty() {
         return Ok(diff);
@@ -233,6 +287,17 @@ mod tests {
         undo(tmp.path()).unwrap();
         assert_eq!(std::fs::read_to_string(tmp.path().join(".env")).unwrap(), ENV);
         assert!(!has_backup(tmp.path()));
+    }
+
+    #[test]
+    fn repeated_keys_all_change_and_last_wins() {
+        let env = "REVERB_PORT=8080\nA=1\nREVERB_PORT=6009\n";
+        assert_eq!(get(env, "REVERB_PORT").as_deref(), Some("6009"));
+        let (out, diff) = apply(env, &[EnvChange::set("REVERB_PORT", "8081")]);
+        assert_eq!(out, "REVERB_PORT=8081\nA=1\nREVERB_PORT=8081\n");
+        assert_eq!(diff[0].before.as_deref(), Some("6009"));
+        let (out, _) = apply(env, &[EnvChange::unset("REVERB_PORT")]);
+        assert_eq!(get(&out, "REVERB_PORT"), None, "{out}");
     }
 
     // ---------- Injeção ----------
