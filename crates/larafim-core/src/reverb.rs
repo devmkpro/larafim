@@ -20,9 +20,12 @@ pub const PORTS: RangeInclusive<u16> = 8080..=8179;
 /// O Reverb escuta só na máquina.
 pub const HOST: &str = "127.0.0.1";
 
-/// O projeto tem o pacote do Reverb (ou a configuração publicada)?
+/// O projeto tem o Reverb pronto para uso: pacote baixado e conhecido pelo
+/// autoload (junto com o cliente Pusher, que o broadcaster usa).
 pub fn is_installed(project: &Path) -> bool {
-    project.join("vendor").join("laravel").join("reverb").is_dir() || project.join("config").join("reverb.php").is_file()
+    project.join("vendor").join("laravel").join("reverb").is_dir()
+        && crate::composer::autoloads(project, "Laravel\\Reverb")
+        && crate::composer::autoloads(project, "Pusher")
 }
 
 /// Primeira porta da faixa fora de `reserved` e livre segundo `is_free`.

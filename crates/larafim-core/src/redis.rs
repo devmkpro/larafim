@@ -37,7 +37,7 @@ pub fn parse_wsl_list(bytes: &[u8]) -> Vec<String> {
 /// O projeto tem um cliente Redis para PHP? No Windows o Larafim não traz a
 /// extensão `phpredis`, então vale o pacote `predis/predis`.
 pub fn has_predis(project: &Path) -> bool {
-    project.join("vendor").join("predis").join("predis").is_dir()
+    project.join("vendor").join("predis").join("predis").is_dir() && crate::composer::autoloads(project, "Predis")
 }
 
 /// Mudanças no `.env` para as filas usarem o Redis do Larafim.

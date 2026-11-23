@@ -580,6 +580,22 @@ pub async fn project_install_reverb(app: AppHandle, path: PathBuf) -> CmdResult<
     .await
     .map_err(|e| e.to_string())?;
     tracing::info!(path = %path.display(), ok, "install:broadcasting --reverb");
+    // Instalação interrompida deixa o vendor sem autoload novo ("Class Pusher\Pusher
+    // not found"): refaz o autoload e publica a config, se faltar.
+    let (ok, out) = if !reverb::is_installed(&path) && path.join("vendor").join("laravel").join("reverb").is_dir() {
+        let (app2, dir, exe) = (app.clone(), path.clone(), php.dir.join("php.exe"));
+        let args = vec![composer.display().to_string(), "dump-autoload".into(), "--no-interaction".into(), "--no-ansi".into()];
+        tauri::async_runtime::spawn_blocking(move || run_install(&app2, &dir, &exe, &args, &[("COMPOSER_NO_INTERACTION", "1".into())]))
+            .await
+            .map_err(|e| e.to_string())?
+    } else {
+        (ok, out)
+    };
+    if reverb::is_installed(&path) && !path.join("config").join("reverb.php").is_file() {
+        let (app2, dir, exe) = (app.clone(), path.clone(), php.dir.join("php.exe"));
+        let args: Vec<String> = ["artisan", "vendor:publish", "--tag=reverb-config", "--no-interaction", "--no-ansi"].iter().map(|s| s.to_string()).collect();
+        let _ = tauri::async_runtime::spawn_blocking(move || run_install(&app2, &dir, &exe, &args, &[])).await;
+    }
     if !ok || !reverb::is_installed(&path) {
         let tail: String = out.trim().chars().rev().take(500).collect::<String>().chars().rev().collect();
         return Err(t!("não foi possível instalar o Reverb: {a}", a = tail));
