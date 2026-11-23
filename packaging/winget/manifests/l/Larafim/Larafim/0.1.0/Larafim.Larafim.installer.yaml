@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.installer.1.10.0.schema.json
+PackageIdentifier: Larafim.Larafim
+PackageVersion: 0.1.0
+InstallerType: nullsoft
+Scope: user
+InstallModes:
+  - interactive
+  - silent
+UpgradeBehavior: install
+ReleaseDate: 2026-11-22
+Installers:
+  - Architecture: x64
+    InstallerUrl: https://github.com/josevictoremiliano/larafim/releases/download/v0.1.0/Larafim_0.1.0_x64-setup.exe
+    InstallerSha256: 4DBA567E62D8957CCE3ED023DA527E1214A5A4919925D19367DB0E60845ACEF0
+ManifestType: installer
+ManifestVersion: 1.10.0

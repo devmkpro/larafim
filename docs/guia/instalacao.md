@@ -22,7 +22,7 @@ instalador foi compilado pelo workflow público deste repositório, a partir do 
 Pelo hash, no PowerShell:
 
 ```powershell
-Get-FileHash .\Larafim_0.1.0_x64-setup.exe -Algorithm SHA256
+Get-FileHash .\Larafim_0.1.1_x64-setup.exe -Algorithm SHA256
 ```
 
 O resultado precisa ser igual à linha do arquivo no `SHA256SUMS.txt`.
@@ -30,7 +30,7 @@ O resultado precisa ser igual à linha do arquivo no `SHA256SUMS.txt`.
 Pela atestação, com o [GitHub CLI](https://cli.github.com/):
 
 ```powershell
-gh attestation verify .\Larafim_0.1.0_x64-setup.exe --repo josevictoremiliano/larafim
+gh attestation verify .\Larafim_0.1.1_x64-setup.exe --repo josevictoremiliano/larafim
 ```
 
 ## Instalar

@@ -3,9 +3,22 @@
 As versões do Larafim e o que mudou em cada uma. O instalador de cada versão fica em
 [Releases](https://github.com/josevictoremiliano/larafim/releases).
 
-## v0.1.0
+## v0.1.1
 
-Primeira versão pública. 🎉
+Versão de manutenção do instalador.
+
+### Correções
+
+- O instalador agora mostra o **ícone do Larafim**, em vez do ícone genérico do NSIS.
+
+### Outras mudanças
+
+- Manifestos para publicar o Larafim no **winget** (`winget install larafim`), em
+  [`packaging/winget`](https://github.com/josevictoremiliano/larafim/tree/main/packaging/winget).
+- **Política de assinatura de código** no README, preparando a assinatura do instalador pela
+  SignPath Foundation. O instalador desta versão ainda não é assinado.
+
+## v0.1.0
 
 O Larafim monta o ambiente de desenvolvimento local para projetos **PHP, Laravel e Node** no
 Windows: cada projeto no seu endereço (`http://loja.offline`), cada um com a sua versão de PHP, tudo
