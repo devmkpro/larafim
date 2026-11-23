@@ -13,6 +13,7 @@
   import { toolsApi } from "../lib/tools";
   import { s3 } from "../lib/s3";
   import { redis } from "../lib/redis";
+  import InstallProgress from "../lib/InstallProgress.svelte";
   import DevPanel from "./DevPanel.svelte";
   import { app } from "../lib/state.svelte";
   import Toggle from "../lib/Toggle.svelte";
@@ -64,6 +65,7 @@
   let mailKey = $state(0);
   let storageKey = $state(0);
   let redisKey = $state(0);
+  let redisBusy = $state(false);
 
   // Redis do Larafim nas filas do projeto: mostra o que muda no .env antes.
   async function chooseRedis(kind: string) {
@@ -78,9 +80,22 @@
           return;
         }
         if (pv.needs_predis) {
-          error = t("O projeto precisa do pacote predis/predis. Rode no terminal do projeto: composer require predis/predis");
-          redisKey++;
-          return;
+          // Sem o pacote o Laravel não conversa com o Redis: oferece instalar (muda o composer.json).
+          const install = await confirm(
+            t("O projeto precisa do pacote predis/predis para usar o Redis. Instalar agora? (composer require predis/predis, altera composer.json e composer.lock)"),
+            "Redis",
+            t("Instalar"),
+          );
+          if (!install) {
+            redisKey++;
+            return;
+          }
+          redisBusy = true;
+          try {
+            await redis.installPredis(p.path);
+          } finally {
+            redisBusy = false;
+          }
         }
         const lines = pv.diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? t("(comentada)")}`).join("\n");
         const ok = await confirm(
@@ -555,13 +570,14 @@
             <span>Redis</span>
             {#key redisKey}
               <div class="select">
-                <select value={project.queue_connection ?? "none"} onchange={(e) => chooseRedis(e.currentTarget.value)}>
+                <select value={project.queue_connection ?? "none"} disabled={redisBusy} onchange={(e) => chooseRedis(e.currentTarget.value)}>
                   <option value="none">{t("Não gerenciado")}</option>
                   <option value="redis">{t("Redis do Larafim (filas)")}</option>
                 </select>
               </div>
             {/key}
           </div>
+          {#if redisBusy}<InstallProgress path={project.path} label={t("Instalando predis/predis…")} />{/if}
         {/if}
       </div>
     {/if}

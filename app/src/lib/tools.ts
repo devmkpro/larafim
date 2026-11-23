@@ -112,6 +112,7 @@ const mock = {
     logs: ["INFO  Processing jobs from the [default] queue."],
   }),
   hasReverb: async (_path: string) => true,
+  installReverb: async (_path: string) => {},
   queuesDiscover: async (_path: string) => ["default", "whatsapp-inbound", "whatsapp", "chat"],
   queuesSet: async (_path: string, text: string) => text.split(",").map((q) => q.trim()).filter(Boolean),
   reverbPreview: async (_path: string): Promise<ReverbPreview> => ({
@@ -158,6 +159,7 @@ export const toolsApi = inTauri
       workerRestart: (path: string, worker: Worker) => invoke<void>("worker_restart", { path, worker }),
       processInfo: (key: string) => invoke<DevInfo>("process_info", { key }),
       hasReverb: (path: string) => invoke<boolean>("has_reverb", { path }),
+      installReverb: (path: string) => invoke<void>("project_install_reverb", { path }),
       reverbPreview: (path: string) => invoke<ReverbPreview>("reverb_preview", { path }),
       queuesDiscover: (path: string) => invoke<string[]>("queues_discover", { path }),
       queuesSet: (path: string, text: string) => invoke<string[]>("queues_set", { path, text }),

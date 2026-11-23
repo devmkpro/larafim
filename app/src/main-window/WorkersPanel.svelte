@@ -5,6 +5,7 @@
   import type { DevLog, DevStatus } from "../lib/node";
   import type { Project } from "../lib/projects";
   import Toggle from "../lib/Toggle.svelte";
+  import InstallProgress from "../lib/InstallProgress.svelte";
   import { confirm } from "../lib/php";
   import { toolsApi, workerKey, type Worker } from "../lib/tools";
 
@@ -23,16 +24,13 @@
     },
   });
 
-  // Comando que instala o Reverb no projeto (a pessoa roda; o Larafim não mexe no composer).
-  const INSTALL = "php artisan install:broadcasting";
-
   let reverb = $state(false);
   let status = $state<Record<string, DevStatus | null>>({});
   let logs = $state<Record<string, string[]>>({});
   let open = $state<Worker | null>(null);
   let error = $state<string | null>(null);
   let busy = $state<Worker | null>(null);
-  let copied = $state(false);
+  let installingReverb = $state(false);
 
   // Filas do worker: o Laravel não tem a lista, então o Larafim descobre e a pessoa ajusta.
   let editingQueues = $state(false);
@@ -104,6 +102,7 @@
     error = null;
     busy = w;
     try {
+      if (w === "reverb" && enabled && !reverb && !(await installReverb())) return;
       if (w === "reverb" && enabled && !(await confirmReverb())) return;
       await toolsApi.workerSet(project.path, w, enabled);
     } catch (e) {
@@ -137,14 +136,27 @@
     );
   }
 
-  async function copyInstall() {
-    await navigator.clipboard.writeText(INSTALL);
-    copied = true;
-    setTimeout(() => (copied = false), 1500);
+  // Projeto sem Reverb: pergunta se deve instalar (altera composer.json, rotas e .env).
+  async function installReverb(): Promise<boolean> {
+    const ok = await confirm(
+      t("O Reverb não está instalado neste projeto. Instalar agora? (php artisan install:broadcasting --reverb: altera composer.json, composer.lock, rotas e .env)"),
+      "Reverb",
+      t("Instalar"),
+    );
+    if (!ok) return false;
+    installingReverb = true;
+    try {
+      await toolsApi.installReverb(project.path);
+      reverb = await toolsApi.hasReverb(project.path);
+      return reverb;
+    } finally {
+      installingReverb = false;
+    }
   }
 
   const stateText = (w: Worker) => {
     const s = status[w];
+    if (w === "reverb" && installingReverb) return t("instalando o Reverb…");
     if (w === "reverb" && !reverb) return t("não instalado neste projeto");
     if (!project.workers.includes(w)) return t("desligado");
     if (s && s.state !== "exited") return t("rodando");
@@ -176,19 +188,16 @@
         <Glyph name="settings" />
       </button>
     {/if}
-    {#if w === "reverb" && !reverb}
-      <button class="btn subtle icon" title={copied ? t("Copiado!") : t("Copiar comando de instalação: {cmd}", { cmd: INSTALL })} onclick={copyInstall}>
-        <Glyph name={copied ? "check" : "copy"} />
-      </button>
-    {:else}
-      <Toggle
-        label={t("Worker {name}", { name: labels[w].title })}
-        checked={project.workers.includes(w)}
-        disabled={busy === w}
-        onchange={(v) => toggle(w, v)}
-      />
-    {/if}
+    <Toggle
+      label={t("Worker {name}", { name: labels[w].title })}
+      checked={project.workers.includes(w)}
+      disabled={busy === w}
+      onchange={(v) => toggle(w, v)}
+    />
   </div>
+  {#if w === "reverb" && installingReverb}
+    <InstallProgress path={project.path} label={t("instalando o Reverb…")} />
+  {/if}
   {#if w === "queue" && editingQueues}
     <div class="queues">
       <label class="caption" for="queues-input">{t("Filas processadas, em ordem de prioridade (separe com vírgula):")}</label>

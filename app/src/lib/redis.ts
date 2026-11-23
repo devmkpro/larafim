@@ -63,6 +63,7 @@ const mock = {
     needs_predis: false,
   }),
   queueConnection: async (_path: string, _connection: "redis" | "database") => {},
+  installPredis: async (_path: string) => {},
 };
 
 export const redis = inTauri
@@ -77,5 +78,6 @@ export const redis = inTauri
       queuePreview: (path: string) => invoke<QueueRedisPreview>("project_queue_redis_preview", { path }),
       queueConnection: (path: string, connection: "redis" | "database") =>
         invoke<void>("project_queue_connection", { path, connection }),
+      installPredis: (path: string) => invoke<void>("project_install_predis", { path }),
     }
   : mock;

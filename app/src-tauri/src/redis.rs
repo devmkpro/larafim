@@ -299,6 +299,45 @@ pub async fn redis_stop(app: AppHandle) {
 
 // ---------- Fila do projeto no Redis ----------
 
+/// `composer require predis/predis` no projeto, com o PHP dele (a pessoa
+/// confirma antes; o Larafim não traz a extensão phpredis para Windows).
+#[tauri::command]
+pub async fn project_install_predis(app: AppHandle, path: std::path::PathBuf) -> CmdResult<()> {
+    if core_redis::has_predis(&path) {
+        return Ok(());
+    }
+    if !path.join("composer.json").is_file() {
+        return Err(t!("o projeto não tem composer.json"));
+    }
+    let paths = app.state::<AppState>().paths.clone();
+    let composer = larafim_runtimes::extras::composer_path(&paths);
+    if !composer.is_file() {
+        return Err(t!("o Composer ainda não foi baixado (instale um PHP pelo Larafim)"));
+    }
+    let view = crate::server::views(&app.state::<AppState>())
+        .into_iter()
+        .find(|v| larafim_core::store::same_path(&v.path, &path))
+        .ok_or_else(|| t!("projeto não encontrado"))?;
+    let installed = larafim_runtimes::php::list_installed(&paths.php_dir());
+    let php = crate::server::php_for(&view, &installed).0.ok_or_else(|| t!("nenhum PHP instalado atende a este projeto"))?;
+    let exe = php.dir.join("php.exe");
+    let (app2, dir) = (app.clone(), path.clone());
+    let args = vec![
+        composer.display().to_string(),
+        "require".into(),
+        "predis/predis".into(),
+        "--no-interaction".into(),
+        "--no-ansi".into(),
+    ];
+    let (ok, out) = blocking(move || crate::tools::run_install(&app2, &dir, &exe, &args, &[("COMPOSER_NO_INTERACTION", "1".into())])).await?;
+    tracing::info!(path = %path.display(), ok, "composer require predis/predis");
+    if !ok || !core_redis::has_predis(&path) {
+        let tail: String = out.trim().chars().rev().take(500).collect::<String>().chars().rev().collect();
+        return Err(t!("não foi possível instalar o predis/predis: {a}", a = tail));
+    }
+    Ok(())
+}
+
 #[derive(Serialize)]
 pub struct QueueRedisPreview {
     configured: bool,

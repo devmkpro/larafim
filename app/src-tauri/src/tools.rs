@@ -322,6 +322,87 @@ pub fn env_changed(app: &AppHandle, path: &Path) {
     });
 }
 
+// ================= Instalações no projeto (Composer/Artisan) =================
+
+#[derive(Clone, Serialize)]
+struct InstallProgress {
+    path: PathBuf,
+    line: String,
+    percent: u8,
+}
+
+/// Roda um comando do Composer/Artisan no projeto e manda cada linha (com a
+/// porcentagem estimada) no evento `project-install`. Devolve (ok, saída).
+pub(crate) fn run_install(
+    app: &AppHandle,
+    path: &Path,
+    exe: &Path,
+    args: &[String],
+    env: &[(&str, String)],
+) -> (bool, String) {
+    use std::io::BufRead;
+    use std::process::{Command, Stdio};
+    let mut cmd = Command::new(exe);
+    cmd.args(args).current_dir(path).stdin(Stdio::null()).stdout(Stdio::piped()).stderr(Stdio::piped());
+    for (k, v) in env {
+        cmd.env(k, v);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x0800_0000); // CREATE_NO_WINDOW
+    }
+    let mut child = match cmd.spawn() {
+        Ok(c) => c,
+        Err(e) => return (false, e.to_string()),
+    };
+    let out = std::sync::Arc::new(Mutex::new(String::new()));
+    let percent = std::sync::Arc::new(Mutex::new(5u8));
+    let emit = |line: &str, p: u8| {
+        let _ = app.emit("project-install", InstallProgress { path: path.to_path_buf(), line: line.to_string(), percent: p });
+    };
+    emit("", 5);
+    let readers: Vec<Box<dyn std::io::Read + Send>> = vec![
+        Box::new(child.stdout.take().expect("stdout")),
+        Box::new(child.stderr.take().expect("stderr")),
+    ];
+    let handles: Vec<_> = readers
+        .into_iter()
+        .map(|r| {
+            let (app, path, out, percent) = (app.clone(), path.to_path_buf(), out.clone(), percent.clone());
+            std::thread::spawn(move || {
+                for line in std::io::BufReader::new(r).lines().map_while(Result::ok) {
+                    let line = larafim_server::devserver::strip_ansi(&line);
+                    let p = {
+                        let mut cur = percent.lock().unwrap();
+                        if let Some(n) = larafim_core::composer::progress(&line) {
+                            *cur = (*cur).max(n); // nunca volta
+                        }
+                        *cur
+                    };
+                    {
+                        let mut o = out.lock().unwrap();
+                        if o.len() < 64 * 1024 {
+                            o.push_str(&line);
+                            o.push('\n');
+                        }
+                    }
+                    if !line.trim().is_empty() {
+                        let _ = app.emit("project-install", InstallProgress { path: path.clone(), line: line.trim().to_string(), percent: p });
+                    }
+                }
+            })
+        })
+        .collect();
+    let ok = child.wait().map(|s| s.success()).unwrap_or(false);
+    for h in handles {
+        let _ = h.join();
+    }
+    emit("", if ok { 100 } else { *percent.lock().unwrap() });
+    let text = out.lock().unwrap().clone();
+    (ok, text)
+}
+
 // ================= Workers do Laravel =================
 
 pub fn worker_key(path: &Path, worker: &str) -> String {
@@ -461,6 +542,50 @@ pub fn process_info(app: AppHandle, key: String) -> crate::server::DevInfo {
 #[tauri::command]
 pub fn has_reverb(path: PathBuf) -> bool {
     reverb::is_installed(&path)
+}
+
+/// Instala o Reverb no projeto (a pessoa confirma antes): o mesmo que
+/// `php artisan install:broadcasting --reverb`, sem perguntas e sem npm,
+/// usando o PHP e o Composer do Larafim. Altera composer.json, rotas e .env.
+#[tauri::command]
+pub async fn project_install_reverb(app: AppHandle, path: PathBuf) -> CmdResult<()> {
+    if reverb::is_installed(&path) {
+        return Ok(());
+    }
+    let view = view_of(&app, &path)?;
+    if view.kind != ProjectKind::Laravel {
+        return Err(t!("workers só existem em projetos Laravel"));
+    }
+    let paths = app.state::<AppState>().paths.clone();
+    let composer = larafim_runtimes::extras::composer_path(&paths);
+    if !composer.is_file() {
+        return Err(t!("o Composer ainda não foi baixado (instale um PHP pelo Larafim)"));
+    }
+    let installed = rphp::list_installed(&paths.php_dir());
+    let php = crate::server::php_for(&view, &installed).0.ok_or_else(|| t!("nenhum PHP instalado atende a este projeto"))?;
+    // O comando roda o reverb:install, que lê o banco/cache em alguns projetos.
+    crate::server::start_project_db(&app, &view).await?;
+    let (app2, dir) = (app.clone(), path.clone());
+    let args: Vec<String> = ["artisan", "install:broadcasting", "--reverb", "--without-node", "--no-interaction", "--no-ansi"]
+        .iter()
+        .map(|s| s.to_string())
+        .chain([format!("--composer={}", composer.display())])
+        .collect();
+    let exe = php.dir.join("php.exe");
+    // O Composer chamado pelo Laravel usa este PHP (o do projeto).
+    let path_env = format!("{};{}", php.dir.display(), std::env::var("PATH").unwrap_or_default());
+    let (ok, out) = tauri::async_runtime::spawn_blocking(move || {
+        run_install(&app2, &dir, &exe, &args, &[("PATH", path_env), ("COMPOSER_NO_INTERACTION", "1".into())])
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    tracing::info!(path = %path.display(), ok, "install:broadcasting --reverb");
+    if !ok || !reverb::is_installed(&path) {
+        let tail: String = out.trim().chars().rev().take(500).collect::<String>().chars().rev().collect();
+        return Err(t!("não foi possível instalar o Reverb: {a}", a = tail));
+    }
+    env_changed(&app, &path);
+    Ok(())
 }
 
 // ================= Filas =================

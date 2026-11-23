@@ -53,8 +53,10 @@ Larafim escolhe outra e atualiza o `.env`. Faça o mesmo se trocar o domínio ou
 HTTPS. Se o servidor do Vite estiver rodando, ele recarrega
 sozinho com o `.env` novo.
 
-Se o projeto ainda não tem o Reverb, a linha mostra **não instalado** e um botão para copiar
-`php artisan install:broadcasting`. O Larafim não roda o Composer no projeto por conta própria.
+Se o projeto ainda não tem o Reverb, a linha mostra **não instalado**. Ao ligar, o Larafim pergunta se
+deve instalar e, se você confirmar, roda `php artisan install:broadcasting --reverb --without-node`
+com o PHP e o Composer dele (altera `composer.json`, `composer.lock`, rotas e `.env`). Depois segue
+para a escolha da porta. Nada é instalado sem a sua confirmação.
 
 ### Filas
 
