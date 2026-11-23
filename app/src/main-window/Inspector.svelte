@@ -9,8 +9,10 @@
   import { terminal } from "../lib/terminal";
   import DbPanel from "./DbPanel.svelte";
   import WorkersPanel from "./WorkersPanel.svelte";
+  import AliasesPanel from "./AliasesPanel.svelte";
   import { toolsApi } from "../lib/tools";
   import { s3 } from "../lib/s3";
+  import { redis } from "../lib/redis";
   import DevPanel from "./DevPanel.svelte";
   import { app } from "../lib/state.svelte";
   import Toggle from "../lib/Toggle.svelte";
@@ -61,6 +63,43 @@
   }
   let mailKey = $state(0);
   let storageKey = $state(0);
+  let redisKey = $state(0);
+
+  // Redis do Larafim nas filas do projeto: mostra o que muda no .env antes.
+  async function chooseRedis(kind: string) {
+    if (!project) return;
+    const p = project;
+    try {
+      if (kind === "redis") {
+        const pv = await redis.queuePreview(p.path);
+        if (!pv.configured) {
+          error = t("Adicione o Redis em Configurações › Serviços.");
+          redisKey++;
+          return;
+        }
+        if (pv.needs_predis) {
+          error = t("O projeto precisa do pacote predis/predis. Rode no terminal do projeto: composer require predis/predis");
+          redisKey++;
+          return;
+        }
+        const lines = pv.diff.map((d) => `${d.key}: ${d.before ?? "—"} → ${d.after ?? t("(comentada)")}`).join("\n");
+        const ok = await confirm(
+          t("Usar o Redis do Larafim nas filas deste projeto?") +
+            (lines ? "\n\n" + t("Mudanças no .env (com cópia em .env.larafim.bak):") + "\n" + lines : ""),
+          "Redis",
+          t("Aplicar"),
+        );
+        if (!ok) {
+          redisKey++;
+          return;
+        }
+      }
+      await redis.queueConnection(p.path, kind === "redis" ? "redis" : "database");
+    } catch (e) {
+      error = String(e);
+      redisKey++;
+    }
+  }
 
   async function chooseStorage(kind: string) {
     if (!project) return;
@@ -469,6 +508,12 @@
       </div>
     {/if}
 
+    {#if imported}
+      <div class="section">
+        <AliasesPanel {project} {onchange} />
+      </div>
+    {/if}
+
     {#if imported && project.kind !== "node"}
       <div class="section">
         <div class="section-title">{t("Serviços")}</div>
@@ -504,6 +549,19 @@
           <button class="btn wide" onclick={() => s3.open().catch((e) => (error = String(e)))}>
             <Glyph name="openExternal" /> {t("Abrir painel do storage")}
           </button>
+        {/if}
+        {#if project.kind === "laravel"}
+          <div class="field">
+            <span>Redis</span>
+            {#key redisKey}
+              <div class="select">
+                <select value={project.queue_connection ?? "none"} onchange={(e) => chooseRedis(e.currentTarget.value)}>
+                  <option value="none">{t("Não gerenciado")}</option>
+                  <option value="redis">{t("Redis do Larafim (filas)")}</option>
+                </select>
+              </div>
+            {/key}
+          </div>
         {/if}
       </div>
     {/if}
